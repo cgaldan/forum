@@ -3,25 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Forum</title>
+    <meta name="description" content="Real-time forum with posts, comments, and private messaging">
+    <title>Forum - Real-time Discussions</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div id="app">
         <!-- Authentication View -->
-        <div id="auth-view" class="view active">
+        <div id="auth-view" class="view active" role="main" aria-label="Authentication">
             <div class="auth-container">
                 <h1>Forum</h1>
-                <div class="auth-tabs">
-                    <button id="login-tab" class="auth-tab active">Login</button>
-                    <button id="register-tab" class="auth-tab">Register</button>
+                <div class="auth-tabs" role="tablist" aria-label="Authentication options">
+                    <button id="login-tab" class="auth-tab active" role="tab" aria-selected="true" aria-controls="login-form">Login</button>
+                    <button id="register-tab" class="auth-tab" role="tab" aria-selected="false" aria-controls="register-form">Register</button>
                 </div>
 
                 <!-- Login Form -->
-                <div id="login-form" class="auth-form active">
+                <div id="login-form" class="auth-form active" role="tabpanel" aria-labelledby="login-tab">
                     <h2>Login</h2>
-                    <div id="login-error" class="error-message"></div>
-                    <form id="loginForm">
+                    <div id="login-error" class="error-message" role="alert" aria-live="polite"></div>
+                    <form id="loginForm" aria-label="Login form">
                         <div class="form-group">
                             <label for="login-identifier">Nickname or Email:</label>
                             <input type="text" id="login-identifier" required>
@@ -35,10 +36,10 @@
                 </div>
 
                 <!-- Register Form -->
-                <div id="register-form" class="auth-form">
+                <div id="register-form" class="auth-form" role="tabpanel" aria-labelledby="register-tab" hidden>
                     <h2>Register</h2>
-                    <div id="register-error" class="error-message"></div>
-                    <form id="registerForm">
+                    <div id="register-error" class="error-message" role="alert" aria-live="polite"></div>
+                    <form id="registerForm" aria-label="Registration form">
                         <div class="form-group">
                             <label for="register-nickname">Nickname:</label>
                             <input type="text" id="register-nickname" required minlength="3">
@@ -79,17 +80,17 @@
         </div>
 
         <!-- Main Forum View -->
-        <div id="main-view" class="view hidden">
-            <header class="header">
+        <div id="main-view" class="view hidden" role="main" aria-label="Forum">
+            <header class="header" role="banner">
                 <h1>Forum</h1>
                 <div class="header-right">
-                    <div class="connection-status">
-                        <span id="ws-status" class="status-indicator offline">●</span>
+                    <div class="connection-status" role="status" aria-live="polite">
+                        <span id="ws-status" class="status-indicator offline" aria-hidden="true">●</span>
                         <span id="ws-status-text">Connecting...</span>
                     </div>
                     <div class="user-info">
                         <span id="current-user">Welcome, <span id="user-nickname"></span></span>
-                        <button id="logout-btn" class="btn btn-secondary">Logout</button>
+                        <button id="logout-btn" class="btn btn-secondary" aria-label="Logout from forum">Logout</button>
                     </div>
                 </div>
             </header>

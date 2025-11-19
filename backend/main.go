@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/gorilla/mux"
 	_ "github.com/mattn/go-sqlite3"
@@ -41,6 +42,9 @@ func main() {
 	hub = newHub()
 	go hub.run()
 
+	// Initialize rate limiter (100 requests per minute)
+	rateLimiter := newRateLimiter(100, time.Minute)
+
 	// Initialize router
 	r := mux.NewRouter()
 
@@ -71,8 +75,11 @@ func main() {
 	frontendPath := "../frontend"
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir(frontendPath)))
 
-	// CORS middleware
+	// Apply middleware
+	r.Use(loggingMiddleware)
+	r.Use(securityHeadersMiddleware)
 	r.Use(corsMiddleware)
+	r.Use(rateLimitMiddleware(rateLimiter))
 
 	// Start server
 	port := os.Getenv("PORT")

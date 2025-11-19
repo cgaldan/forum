@@ -21,6 +21,7 @@ const state = {
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
     initializeApp();
+    setupKeyboardNavigation();
 });
 
 function initializeApp() {
@@ -271,8 +272,43 @@ function clearError(elementId) {
     errorElement.classList.remove('show');
 }
 
+// Toast Notifications
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'polite');
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.animation = 'slideIn 0.3s ease-out reverse';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// Loading States
+function showLoading(containerId) {
+    const container = document.getElementById(containerId);
+    if (container) {
+        container.innerHTML = '<div class="spinner"></div>';
+    }
+}
+
+function showSkeletonPosts() {
+    const container = document.getElementById('posts-container');
+    container.innerHTML = `
+        <div class="skeleton skeleton-post"></div>
+        <div class="skeleton skeleton-post"></div>
+        <div class="skeleton skeleton-post"></div>
+    `;
+}
+
 // Post Management
 async function loadPosts(category = '') {
+    showSkeletonPosts();
+    
     try {
         let url = `${API_URL}/posts`;
         if (category) {
@@ -280,16 +316,24 @@ async function loadPosts(category = '') {
         }
 
         const response = await fetch(url);
+        
+        if (!response.ok) {
+            throw new Error('Failed to fetch posts');
+        }
+        
         const data = await response.json();
 
         if (data.success) {
             state.posts = data.posts || [];
             renderPosts();
+        } else {
+            throw new Error(data.message || 'Failed to load posts');
         }
     } catch (error) {
         console.error('Load posts error:', error);
         document.getElementById('posts-container').innerHTML = 
-            '<div class="no-posts">Failed to load posts</div>';
+            '<div class="no-posts">Failed to load posts. Please try again.</div>';
+        showToast('Failed to load posts', 'error');
     }
 }
 
@@ -321,9 +365,27 @@ async function handleCreatePost(e) {
     e.preventDefault();
     clearError('post-error');
 
-    const title = document.getElementById('post-title').value;
+    const title = document.getElementById('post-title').value.trim();
     const category = document.getElementById('post-category').value;
-    const content = document.getElementById('post-content').value;
+    const content = document.getElementById('post-content').value.trim();
+
+    // Client-side validation
+    if (!title || title.length < 3) {
+        showError('post-error', 'Title must be at least 3 characters');
+        return;
+    }
+    if (!content || content.length < 10) {
+        showError('post-error', 'Content must be at least 10 characters');
+        return;
+    }
+    if (!category) {
+        showError('post-error', 'Please select a category');
+        return;
+    }
+
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Posting...';
 
     try {
         const response = await fetch(`${API_URL}/posts`, {
@@ -339,13 +401,18 @@ async function handleCreatePost(e) {
 
         if (data.success) {
             document.getElementById('createPostForm').reset();
+            showToast('Post created successfully!', 'success');
             loadPosts(state.currentCategory);
         } else {
             showError('post-error', data.message || 'Failed to create post');
         }
     } catch (error) {
         showError('post-error', 'Network error. Please try again.');
+        showToast('Failed to create post', 'error');
         console.error('Create post error:', error);
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Post';
     }
 }
 
@@ -728,5 +795,61 @@ function closeChatPanel() {
     document.getElementById('message-panel').classList.add('hidden');
     state.currentChatUser = null;
     state.messages = [];
+}
+
+// Keyboard Navigation
+function setupKeyboardNavigation() {
+    // ESC key to close modals
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            // Close post modal
+            const postModal = document.getElementById('post-modal');
+            if (postModal && !postModal.classList.contains('hidden')) {
+                closePostModal();
+            }
+            
+            // Close chat panel
+            const messagePanel = document.getElementById('message-panel');
+            if (messagePanel && !messagePanel.classList.contains('hidden')) {
+                closeChatPanel();
+            }
+        }
+    });
+
+    // Enter key to submit forms (when not in textarea)
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey && e.target.tagName !== 'TEXTAREA') {
+            const form = e.target.closest('form');
+            if (form) {
+                e.preventDefault();
+                form.dispatchEvent(new Event('submit'));
+            }
+        }
+    });
+}
+
+// Performance: Debounce function
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+// Performance: Throttle function
+function throttle(func, limit) {
+    let inThrottle;
+    return function(...args) {
+        if (!inThrottle) {
+            func.apply(this, args);
+            inThrottle = true;
+            setTimeout(() => inThrottle = false, limit);
+        }
+    };
 }
 
