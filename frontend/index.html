@@ -82,9 +82,15 @@
         <div id="main-view" class="view hidden">
             <header class="header">
                 <h1>Forum</h1>
-                <div class="user-info">
-                    <span id="current-user">Welcome, <span id="user-nickname"></span></span>
-                    <button id="logout-btn" class="btn btn-secondary">Logout</button>
+                <div class="header-right">
+                    <div class="connection-status">
+                        <span id="ws-status" class="status-indicator offline">●</span>
+                        <span id="ws-status-text">Connecting...</span>
+                    </div>
+                    <div class="user-info">
+                        <span id="current-user">Welcome, <span id="user-nickname"></span></span>
+                        <button id="logout-btn" class="btn btn-secondary">Logout</button>
+                    </div>
                 </div>
             </header>
 
@@ -128,6 +134,9 @@
                             <option value="sports">Sports</option>
                             <option value="other">Other</option>
                         </select>
+                        <div class="online-users-count">
+                            <span id="online-count">0</span> users online
+                        </div>
                     </div>
 
                     <!-- Posts Feed -->

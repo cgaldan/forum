@@ -8,7 +8,11 @@ const state = {
     currentView: 'auth',
     posts: [],
     currentPost: null,
-    currentCategory: ''
+    currentCategory: '',
+    ws: null,
+    wsReconnectAttempts: 0,
+    wsMaxReconnectAttempts: 5,
+    onlineUsers: []
 };
 
 // Initialize app
@@ -163,6 +167,9 @@ async function handleRegister(e) {
 
 // Handle Logout
 async function handleLogout() {
+    // Disconnect WebSocket
+    disconnectWebSocket();
+
     try {
         await fetch(`${API_URL}/auth/logout`, {
             method: 'POST',
@@ -177,6 +184,7 @@ async function handleLogout() {
     // Clear state regardless of API response
     state.token = null;
     state.currentUser = null;
+    state.onlineUsers = [];
     localStorage.removeItem('token');
     showAuthView();
 }
@@ -233,6 +241,9 @@ function showMainView() {
 
     // Load posts
     loadPosts();
+
+    // Connect WebSocket
+    connectWebSocket();
 }
 
 // Error handling
@@ -427,5 +438,121 @@ function formatDate(dateString) {
     if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
     
     return date.toLocaleDateString();
+}
+
+// WebSocket Management
+function connectWebSocket() {
+    if (!state.token) return;
+
+    updateConnectionStatus('connecting', 'Connecting...');
+
+    // Use ws:// for localhost, wss:// for production
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws?token=${state.token}`;
+
+    try {
+        state.ws = new WebSocket(wsUrl);
+
+        state.ws.onopen = () => {
+            console.log('WebSocket connected');
+            updateConnectionStatus('online', 'Connected');
+            state.wsReconnectAttempts = 0;
+        };
+
+        state.ws.onmessage = (event) => {
+            try {
+                const message = JSON.parse(event.data);
+                handleWebSocketMessage(message);
+            } catch (error) {
+                console.error('WebSocket message parse error:', error);
+            }
+        };
+
+        state.ws.onerror = (error) => {
+            console.error('WebSocket error:', error);
+            updateConnectionStatus('offline', 'Connection error');
+        };
+
+        state.ws.onclose = () => {
+            console.log('WebSocket disconnected');
+            updateConnectionStatus('offline', 'Disconnected');
+            
+            // Attempt to reconnect
+            if (state.wsReconnectAttempts < state.wsMaxReconnectAttempts) {
+                state.wsReconnectAttempts++;
+                console.log(`Reconnecting... Attempt ${state.wsReconnectAttempts}`);
+                setTimeout(connectWebSocket, 3000);
+            } else {
+                updateConnectionStatus('offline', 'Connection failed');
+            }
+        };
+    } catch (error) {
+        console.error('WebSocket connection error:', error);
+        updateConnectionStatus('offline', 'Connection failed');
+    }
+}
+
+function handleWebSocketMessage(message) {
+    console.log('WebSocket message:', message);
+
+    switch (message.type) {
+        case 'user_status':
+            handleUserStatus(message.payload);
+            break;
+        case 'online_users':
+            handleOnlineUsers(message.payload);
+            break;
+        case 'pong':
+            // Heartbeat response
+            break;
+        default:
+            console.log('Unknown message type:', message.type);
+    }
+}
+
+function handleUserStatus(payload) {
+    const { user_id, nickname, online } = payload;
+    
+    if (online) {
+        // User came online
+        if (!state.onlineUsers.find(u => u.user_id === user_id)) {
+            state.onlineUsers.push({ user_id, nickname, online: true });
+        }
+        console.log(`${nickname} is now online`);
+    } else {
+        // User went offline
+        state.onlineUsers = state.onlineUsers.filter(u => u.user_id !== user_id);
+        console.log(`${nickname} is now offline`);
+    }
+
+    updateOnlineCount();
+}
+
+function handleOnlineUsers(payload) {
+    state.onlineUsers = payload.users || [];
+    updateOnlineCount();
+    console.log(`${state.onlineUsers.length} users online`);
+}
+
+function updateConnectionStatus(status, text) {
+    const indicator = document.getElementById('ws-status');
+    const statusText = document.getElementById('ws-status-text');
+
+    indicator.className = `status-indicator ${status}`;
+    statusText.textContent = text;
+}
+
+function updateOnlineCount() {
+    const countElement = document.getElementById('online-count');
+    if (countElement) {
+        countElement.textContent = state.onlineUsers.length;
+    }
+}
+
+function disconnectWebSocket() {
+    if (state.ws) {
+        state.ws.close();
+        state.ws = null;
+    }
 }
 

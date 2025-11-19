@@ -37,6 +37,10 @@ func main() {
 		log.Fatal("Failed to initialize database:", err)
 	}
 
+	// Initialize WebSocket hub
+	hub = newHub()
+	go hub.run()
+
 	// Initialize router
 	r := mux.NewRouter()
 
@@ -51,6 +55,12 @@ func main() {
 	r.HandleFunc("/api/posts", createPostHandler).Methods("POST")
 	r.HandleFunc("/api/posts/{id}", getPostHandler).Methods("GET")
 	r.HandleFunc("/api/posts/{id}/comments", createCommentHandler).Methods("POST")
+
+	// WebSocket route
+	r.HandleFunc("/ws", wsHandler)
+
+	// Online users route
+	r.HandleFunc("/api/users/online", getOnlineUsersHandler).Methods("GET")
 
 	// Serve static files from frontend directory
 	frontendPath := "../frontend"

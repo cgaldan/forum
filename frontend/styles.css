@@ -181,6 +181,37 @@ body {
     font-size: 2em;
 }
 
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 30px;
+}
+
+.connection-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9em;
+    color: #666;
+}
+
+.status-indicator {
+    font-size: 1.5em;
+    line-height: 1;
+}
+
+.status-indicator.online {
+    color: #4caf50;
+}
+
+.status-indicator.offline {
+    color: #f44336;
+}
+
+.status-indicator.connecting {
+    color: #ff9800;
+}
+
 .user-info {
     display: flex;
     align-items: center;
@@ -287,6 +318,17 @@ body {
     border: 2px solid #e0e0e0;
     border-radius: 8px;
     font-size: 14px;
+}
+
+.online-users-count {
+    color: #4caf50;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+#online-count {
+    font-size: 1.2em;
+    font-weight: 700;
 }
 
 .posts-feed {
