@@ -89,14 +89,71 @@
             </header>
 
             <main class="main-content">
-                <div class="content-placeholder">
-                    <h2>✓ Authentication Working!</h2>
-                    <p>You are successfully logged in. The forum features (posts, comments, messaging) will be implemented in the next phases.</p>
-                    <div class="user-details">
-                        <h3>Your Profile:</h3>
-                        <p><strong>Nickname:</strong> <span id="profile-nickname"></span></p>
-                        <p><strong>Email:</strong> <span id="profile-email"></span></p>
-                        <p><strong>Name:</strong> <span id="profile-name"></span></p>
+                <div class="forum-container">
+                    <!-- Create Post Section -->
+                    <div class="create-post-section">
+                        <h2>Create a Post</h2>
+                        <div id="post-error" class="error-message"></div>
+                        <form id="createPostForm">
+                            <div class="form-group">
+                                <input type="text" id="post-title" placeholder="Post Title" required minlength="3">
+                            </div>
+                            <div class="form-group">
+                                <select id="post-category" required>
+                                    <option value="">Select Category</option>
+                                    <option value="general">General</option>
+                                    <option value="technology">Technology</option>
+                                    <option value="gaming">Gaming</option>
+                                    <option value="music">Music</option>
+                                    <option value="sports">Sports</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <textarea id="post-content" placeholder="What's on your mind?" required minlength="10" rows="4"></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Post</button>
+                        </form>
+                    </div>
+
+                    <!-- Filter Section -->
+                    <div class="filter-section">
+                        <label>Filter by category:</label>
+                        <select id="category-filter">
+                            <option value="">All Categories</option>
+                            <option value="general">General</option>
+                            <option value="technology">Technology</option>
+                            <option value="gaming">Gaming</option>
+                            <option value="music">Music</option>
+                            <option value="sports">Sports</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+
+                    <!-- Posts Feed -->
+                    <div class="posts-feed">
+                        <h2>Posts</h2>
+                        <div id="posts-container">
+                            <div class="loading">Loading posts...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Post Detail Modal -->
+                <div id="post-modal" class="modal hidden">
+                    <div class="modal-content">
+                        <span class="close-modal">&times;</span>
+                        <div id="post-detail">
+                            <!-- Post detail will be loaded here -->
+                        </div>
+                        <div class="comments-section">
+                            <h3>Comments</h3>
+                            <div id="comments-container"></div>
+                            <form id="createCommentForm" class="comment-form">
+                                <textarea id="comment-content" placeholder="Add a comment..." required rows="3"></textarea>
+                                <button type="submit" class="btn btn-primary">Comment</button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </main>

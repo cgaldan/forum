@@ -46,6 +46,12 @@ func main() {
 	r.HandleFunc("/api/auth/logout", logoutHandler).Methods("POST")
 	r.HandleFunc("/api/auth/me", meHandler).Methods("GET")
 
+	// Post routes
+	r.HandleFunc("/api/posts", getPostsHandler).Methods("GET")
+	r.HandleFunc("/api/posts", createPostHandler).Methods("POST")
+	r.HandleFunc("/api/posts/{id}", getPostHandler).Methods("GET")
+	r.HandleFunc("/api/posts/{id}/comments", createCommentHandler).Methods("POST")
+
 	// Serve static files from frontend directory
 	frontendPath := "../frontend"
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir(frontendPath)))

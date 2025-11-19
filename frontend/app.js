@@ -5,7 +5,10 @@ const API_URL = '/api';
 const state = {
     currentUser: null,
     token: null,
-    currentView: 'auth'
+    currentView: 'auth',
+    posts: [],
+    currentPost: null,
+    currentCategory: ''
 };
 
 // Initialize app
@@ -44,6 +47,23 @@ function setupAuthListeners() {
 function setupMainViewListeners() {
     const logoutBtn = document.getElementById('logout-btn');
     logoutBtn.addEventListener('click', handleLogout);
+
+    const createPostForm = document.getElementById('createPostForm');
+    createPostForm.addEventListener('submit', handleCreatePost);
+
+    const categoryFilter = document.getElementById('category-filter');
+    categoryFilter.addEventListener('change', handleCategoryFilter);
+
+    const createCommentForm = document.getElementById('createCommentForm');
+    createCommentForm.addEventListener('submit', handleCreateComment);
+
+    const closeModal = document.querySelector('.close-modal');
+    closeModal.addEventListener('click', closePostModal);
+
+    const modal = document.getElementById('post-modal');
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closePostModal();
+    });
 }
 
 // Tab switching
@@ -209,11 +229,10 @@ function showMainView() {
     // Update user info in the UI
     if (state.currentUser) {
         document.getElementById('user-nickname').textContent = state.currentUser.nickname;
-        document.getElementById('profile-nickname').textContent = state.currentUser.nickname;
-        document.getElementById('profile-email').textContent = state.currentUser.email;
-        document.getElementById('profile-name').textContent = 
-            `${state.currentUser.first_name} ${state.currentUser.last_name}`;
     }
+
+    // Load posts
+    loadPosts();
 }
 
 // Error handling
@@ -227,5 +246,186 @@ function clearError(elementId) {
     const errorElement = document.getElementById(elementId);
     errorElement.textContent = '';
     errorElement.classList.remove('show');
+}
+
+// Post Management
+async function loadPosts(category = '') {
+    try {
+        let url = `${API_URL}/posts`;
+        if (category) {
+            url += `?category=${category}`;
+        }
+
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.success) {
+            state.posts = data.posts || [];
+            renderPosts();
+        }
+    } catch (error) {
+        console.error('Load posts error:', error);
+        document.getElementById('posts-container').innerHTML = 
+            '<div class="no-posts">Failed to load posts</div>';
+    }
+}
+
+function renderPosts() {
+    const container = document.getElementById('posts-container');
+    
+    if (state.posts.length === 0) {
+        container.innerHTML = '<div class="no-posts">No posts yet. Be the first to post!</div>';
+        return;
+    }
+
+    container.innerHTML = state.posts.map(post => `
+        <div class="post-card" onclick="openPost(${post.id})">
+            <div class="post-card-header">
+                <h3 class="post-title">${escapeHtml(post.title)}</h3>
+                <span class="post-category">${escapeHtml(post.category)}</span>
+            </div>
+            <div class="post-meta">
+                by ${escapeHtml(post.author)} • ${formatDate(post.created_at)}
+            </div>
+            <div class="post-content-preview">
+                ${escapeHtml(post.content.substring(0, 200))}${post.content.length > 200 ? '...' : ''}
+            </div>
+        </div>
+    `).join('');
+}
+
+async function handleCreatePost(e) {
+    e.preventDefault();
+    clearError('post-error');
+
+    const title = document.getElementById('post-title').value;
+    const category = document.getElementById('post-category').value;
+    const content = document.getElementById('post-content').value;
+
+    try {
+        const response = await fetch(`${API_URL}/posts`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': state.token
+            },
+            body: JSON.stringify({ title, category, content })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            document.getElementById('createPostForm').reset();
+            loadPosts(state.currentCategory);
+        } else {
+            showError('post-error', data.message || 'Failed to create post');
+        }
+    } catch (error) {
+        showError('post-error', 'Network error. Please try again.');
+        console.error('Create post error:', error);
+    }
+}
+
+function handleCategoryFilter(e) {
+    state.currentCategory = e.target.value;
+    loadPosts(state.currentCategory);
+}
+
+async function openPost(postId) {
+    try {
+        const response = await fetch(`${API_URL}/posts/${postId}`);
+        const data = await response.json();
+
+        if (data.success) {
+            state.currentPost = data.post;
+            renderPostDetail(data.post, data.comments || []);
+            document.getElementById('post-modal').classList.add('active');
+            document.getElementById('post-modal').classList.remove('hidden');
+        }
+    } catch (error) {
+        console.error('Open post error:', error);
+    }
+}
+
+function renderPostDetail(post, comments) {
+    document.getElementById('post-detail').innerHTML = `
+        <h2 class="post-detail-title">${escapeHtml(post.title)}</h2>
+        <div class="post-detail-meta">
+            <span class="post-category">${escapeHtml(post.category)}</span> • 
+            by ${escapeHtml(post.author)} • ${formatDate(post.created_at)}
+        </div>
+        <div class="post-detail-content">${escapeHtml(post.content)}</div>
+    `;
+
+    const commentsContainer = document.getElementById('comments-container');
+    if (comments.length === 0) {
+        commentsContainer.innerHTML = '<div class="no-posts">No comments yet. Be the first to comment!</div>';
+    } else {
+        commentsContainer.innerHTML = comments.map(comment => `
+            <div class="comment-card">
+                <div class="comment-author">${escapeHtml(comment.author)}</div>
+                <div class="comment-date">${formatDate(comment.created_at)}</div>
+                <div class="comment-content">${escapeHtml(comment.content)}</div>
+            </div>
+        `).join('');
+    }
+}
+
+async function handleCreateComment(e) {
+    e.preventDefault();
+
+    if (!state.currentPost) return;
+
+    const content = document.getElementById('comment-content').value;
+
+    try {
+        const response = await fetch(`${API_URL}/posts/${state.currentPost.id}/comments`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': state.token
+            },
+            body: JSON.stringify({ content })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            document.getElementById('comment-content').value = '';
+            // Reload post to get updated comments
+            openPost(state.currentPost.id);
+        }
+    } catch (error) {
+        console.error('Create comment error:', error);
+    }
+}
+
+function closePostModal() {
+    document.getElementById('post-modal').classList.remove('active');
+    document.getElementById('post-modal').classList.add('hidden');
+    state.currentPost = null;
+}
+
+// Utility functions
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'just now';
+    if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+    
+    return date.toLocaleDateString();
 }
 
