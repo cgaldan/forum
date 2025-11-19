@@ -71,6 +71,23 @@ func initDatabase() error {
 		return fmt.Errorf("failed to create comments table: %v", err)
 	}
 
+	// Create messages table for private messaging
+	messagesTable := `
+	CREATE TABLE IF NOT EXISTS messages (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		sender_id INTEGER NOT NULL,
+		receiver_id INTEGER NOT NULL,
+		content TEXT NOT NULL,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		read_at DATETIME,
+		FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
+		FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE
+	);`
+
+	if _, err := db.Exec(messagesTable); err != nil {
+		return fmt.Errorf("failed to create messages table: %v", err)
+	}
+
 	// Create indexes for better performance
 	indexes := []string{
 		"CREATE INDEX IF NOT EXISTS idx_users_nickname ON users(nickname);",
@@ -82,6 +99,9 @@ func initDatabase() error {
 		"CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts(created_at);",
 		"CREATE INDEX IF NOT EXISTS idx_comments_post_id ON comments(post_id);",
 		"CREATE INDEX IF NOT EXISTS idx_comments_user_id ON comments(user_id);",
+		"CREATE INDEX IF NOT EXISTS idx_messages_sender_id ON messages(sender_id);",
+		"CREATE INDEX IF NOT EXISTS idx_messages_receiver_id ON messages(receiver_id);",
+		"CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at);",
 	}
 
 	for _, idx := range indexes {

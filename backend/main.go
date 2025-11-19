@@ -62,6 +62,11 @@ func main() {
 	// Online users route
 	r.HandleFunc("/api/users/online", getOnlineUsersHandler).Methods("GET")
 
+	// Message routes
+	r.HandleFunc("/api/messages/conversations", getConversationsHandler).Methods("GET")
+	r.HandleFunc("/api/messages/{id}", getMessagesHandler).Methods("GET")
+	r.HandleFunc("/api/messages/{id}", sendMessageHandler).Methods("POST")
+
 	// Serve static files from frontend directory
 	frontendPath := "../frontend"
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir(frontendPath)))

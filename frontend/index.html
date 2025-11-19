@@ -95,6 +95,43 @@
             </header>
 
             <main class="main-content">
+                <div class="main-layout">
+                    <!-- Messaging Sidebar -->
+                    <aside class="messaging-sidebar">
+                        <div class="sidebar-header">
+                            <h3>Messages</h3>
+                            <button id="toggle-sidebar" class="btn-icon">◀</button>
+                        </div>
+                        <div class="online-users-list">
+                            <h4>Online Users</h4>
+                            <div id="online-users-container">
+                                <div class="loading">Loading...</div>
+                            </div>
+                        </div>
+                        <div class="conversations-list">
+                            <h4>Recent Conversations</h4>
+                            <div id="conversations-container">
+                                <div class="no-conversations">No conversations yet</div>
+                            </div>
+                        </div>
+                    </aside>
+
+                    <!-- Message Thread Panel -->
+                    <div id="message-panel" class="message-panel hidden">
+                        <div class="message-panel-header">
+                            <h3 id="chat-user-name">Select a user to chat</h3>
+                            <button id="close-chat" class="btn-icon">✕</button>
+                        </div>
+                        <div id="messages-container" class="messages-container">
+                            <div class="no-messages">Select a user to start chatting</div>
+                        </div>
+                        <form id="sendMessageForm" class="message-input-form">
+                            <textarea id="message-input" placeholder="Type a message..." rows="2" required></textarea>
+                            <button type="submit" class="btn btn-primary">Send</button>
+                        </form>
+                    </div>
+
+                    <!-- Forum Content -->
                 <div class="forum-container">
                     <!-- Create Post Section -->
                     <div class="create-post-section">
@@ -146,6 +183,7 @@
                             <div class="loading">Loading posts...</div>
                         </div>
                     </div>
+                </div>
                 </div>
 
                 <!-- Post Detail Modal -->

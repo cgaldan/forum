@@ -12,7 +12,10 @@ const state = {
     ws: null,
     wsReconnectAttempts: 0,
     wsMaxReconnectAttempts: 5,
-    onlineUsers: []
+    onlineUsers: [],
+    currentChatUser: null,
+    messages: [],
+    conversations: []
 };
 
 // Initialize app
@@ -68,6 +71,12 @@ function setupMainViewListeners() {
     modal.addEventListener('click', (e) => {
         if (e.target === modal) closePostModal();
     });
+
+    const sendMessageForm = document.getElementById('sendMessageForm');
+    sendMessageForm.addEventListener('submit', handleSendMessage);
+
+    const closeChat = document.getElementById('close-chat');
+    closeChat.addEventListener('click', closeChatPanel);
 }
 
 // Tab switching
@@ -241,6 +250,9 @@ function showMainView() {
 
     // Load posts
     loadPosts();
+
+    // Load conversations
+    loadConversations();
 
     // Connect WebSocket
     connectWebSocket();
@@ -502,6 +514,9 @@ function handleWebSocketMessage(message) {
         case 'online_users':
             handleOnlineUsers(message.payload);
             break;
+        case 'new_message':
+            handleNewMessage(message.payload);
+            break;
         case 'pong':
             // Heartbeat response
             break;
@@ -510,27 +525,10 @@ function handleWebSocketMessage(message) {
     }
 }
 
-function handleUserStatus(payload) {
-    const { user_id, nickname, online } = payload;
-    
-    if (online) {
-        // User came online
-        if (!state.onlineUsers.find(u => u.user_id === user_id)) {
-            state.onlineUsers.push({ user_id, nickname, online: true });
-        }
-        console.log(`${nickname} is now online`);
-    } else {
-        // User went offline
-        state.onlineUsers = state.onlineUsers.filter(u => u.user_id !== user_id);
-        console.log(`${nickname} is now offline`);
-    }
-
-    updateOnlineCount();
-}
-
 function handleOnlineUsers(payload) {
     state.onlineUsers = payload.users || [];
     updateOnlineCount();
+    renderOnlineUsers();
     console.log(`${state.onlineUsers.length} users online`);
 }
 
@@ -554,5 +552,181 @@ function disconnectWebSocket() {
         state.ws.close();
         state.ws = null;
     }
+}
+
+// Messaging Functions
+function handleUserStatus(payload) {
+    const { user_id, nickname, online } = payload;
+    
+    if (online) {
+        // User came online
+        if (!state.onlineUsers.find(u => u.user_id === user_id)) {
+            state.onlineUsers.push({ user_id, nickname, online: true });
+        }
+        console.log(`${nickname} is now online`);
+    } else {
+        // User went offline
+        state.onlineUsers = state.onlineUsers.filter(u => u.user_id !== user_id);
+        console.log(`${nickname} is now offline`);
+    }
+
+    updateOnlineCount();
+    renderOnlineUsers();
+}
+
+function renderOnlineUsers() {
+    const container = document.getElementById('online-users-container');
+    
+    if (state.onlineUsers.length === 0) {
+        container.innerHTML = '<div class="no-conversations">No users online</div>';
+        return;
+    }
+
+    // Filter out current user
+    const otherUsers = state.onlineUsers.filter(u => u.user_id !== state.currentUser.id);
+
+    container.innerHTML = otherUsers.map(user => `
+        <div class="user-item" onclick="openChat(${user.user_id}, '${escapeHtml(user.nickname)}')">
+            <div class="user-item-name">${escapeHtml(user.nickname)}</div>
+            <div class="user-item-status">● Online</div>
+        </div>
+    `).join('');
+}
+
+async function loadConversations() {
+    try {
+        const response = await fetch(`${API_URL}/messages/conversations`, {
+            headers: {
+                'Authorization': state.token
+            }
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            state.conversations = data.conversations || [];
+            renderConversations();
+        }
+    } catch (error) {
+        console.error('Load conversations error:', error);
+    }
+}
+
+function renderConversations() {
+    const container = document.getElementById('conversations-container');
+    
+    if (state.conversations.length === 0) {
+        container.innerHTML = '<div class="no-conversations">No conversations yet</div>';
+        return;
+    }
+
+    container.innerHTML = state.conversations.map(conv => `
+        <div class="conversation-item" onclick="openChat(${conv.user_id}, '${escapeHtml(conv.nickname)}')">
+            <div class="conversation-name">
+                ${escapeHtml(conv.nickname)}
+                ${conv.unread_count > 0 ? `<span class="conversation-unread">${conv.unread_count}</span>` : ''}
+            </div>
+            <div class="conversation-preview">${escapeHtml(conv.last_message)}</div>
+        </div>
+    `).join('');
+}
+
+async function openChat(userId, nickname) {
+    state.currentChatUser = { id: userId, nickname };
+    
+    document.getElementById('chat-user-name').textContent = nickname;
+    document.getElementById('message-panel').classList.remove('hidden');
+    
+    // Load message history
+    await loadMessages(userId);
+}
+
+async function loadMessages(userId) {
+    try {
+        const response = await fetch(`${API_URL}/messages/${userId}`, {
+            headers: {
+                'Authorization': state.token
+            }
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            state.messages = data.messages || [];
+            renderMessages();
+        }
+    } catch (error) {
+        console.error('Load messages error:', error);
+    }
+}
+
+function renderMessages() {
+    const container = document.getElementById('messages-container');
+    
+    if (state.messages.length === 0) {
+        container.innerHTML = '<div class="no-messages">No messages yet. Start the conversation!</div>';
+        return;
+    }
+
+    container.innerHTML = state.messages.map(msg => {
+        const isSent = msg.sender_id === state.currentUser.id;
+        return `
+            <div class="message-bubble ${isSent ? 'sent' : 'received'}">
+                ${!isSent ? `<div class="message-sender">${escapeHtml(msg.sender_name)}</div>` : ''}
+                <div>${escapeHtml(msg.content)}</div>
+                <div class="message-time">${formatDate(msg.created_at)}</div>
+            </div>
+        `;
+    }).join('');
+
+    // Scroll to bottom
+    container.scrollTop = container.scrollHeight;
+}
+
+async function handleSendMessage(e) {
+    e.preventDefault();
+
+    if (!state.currentChatUser) return;
+
+    const content = document.getElementById('message-input').value.trim();
+    if (!content) return;
+
+    try {
+        const response = await fetch(`${API_URL}/messages/${state.currentChatUser.id}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': state.token
+            },
+            body: JSON.stringify({ content })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            document.getElementById('message-input').value = '';
+            // Message will be added via WebSocket
+        }
+    } catch (error) {
+        console.error('Send message error:', error);
+    }
+}
+
+function handleNewMessage(message) {
+    console.log('New message received:', message);
+
+    // If chat is open with this user, add message to view
+    if (state.currentChatUser && 
+        (message.sender_id === state.currentChatUser.id || 
+         message.receiver_id === state.currentChatUser.id)) {
+        state.messages.push(message);
+        renderMessages();
+    }
+
+    // Reload conversations to update unread count
+    loadConversations();
+}
+
+function closeChatPanel() {
+    document.getElementById('message-panel').classList.add('hidden');
+    state.currentChatUser = null;
+    state.messages = [];
 }
 
