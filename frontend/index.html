@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forum</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Authentication View -->
+        <div id="auth-view" class="view active">
+            <div class="auth-container">
+                <h1>Forum</h1>
+                <div class="auth-tabs">
+                    <button id="login-tab" class="auth-tab active">Login</button>
+                    <button id="register-tab" class="auth-tab">Register</button>
+                </div>
+
+                <!-- Login Form -->
+                <div id="login-form" class="auth-form active">
+                    <h2>Login</h2>
+                    <div id="login-error" class="error-message"></div>
+                    <form id="loginForm">
+                        <div class="form-group">
+                            <label for="login-identifier">Nickname or Email:</label>
+                            <input type="text" id="login-identifier" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="login-password">Password:</label>
+                            <input type="password" id="login-password" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Login</button>
+                    </form>
+                </div>
+
+                <!-- Register Form -->
+                <div id="register-form" class="auth-form">
+                    <h2>Register</h2>
+                    <div id="register-error" class="error-message"></div>
+                    <form id="registerForm">
+                        <div class="form-group">
+                            <label for="register-nickname">Nickname:</label>
+                            <input type="text" id="register-nickname" required minlength="3">
+                        </div>
+                        <div class="form-group">
+                            <label for="register-email">Email:</label>
+                            <input type="email" id="register-email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="register-password">Password:</label>
+                            <input type="password" id="register-password" required minlength="6">
+                        </div>
+                        <div class="form-group">
+                            <label for="register-firstname">First Name:</label>
+                            <input type="text" id="register-firstname" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="register-lastname">Last Name:</label>
+                            <input type="text" id="register-lastname" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="register-age">Age:</label>
+                            <input type="number" id="register-age" required min="13" max="120">
+                        </div>
+                        <div class="form-group">
+                            <label for="register-gender">Gender:</label>
+                            <select id="register-gender" required>
+                                <option value="">Select gender</option>
+                                <option value="male">Male</option>
+                                <option value="female">Female</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Register</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Forum View -->
+        <div id="main-view" class="view hidden">
+            <header class="header">
+                <h1>Forum</h1>
+                <div class="user-info">
+                    <span id="current-user">Welcome, <span id="user-nickname"></span></span>
+                    <button id="logout-btn" class="btn btn-secondary">Logout</button>
+                </div>
+            </header>
+
+            <main class="main-content">
+                <div class="content-placeholder">
+                    <h2>✓ Authentication Working!</h2>
+                    <p>You are successfully logged in. The forum features (posts, comments, messaging) will be implemented in the next phases.</p>
+                    <div class="user-details">
+                        <h3>Your Profile:</h3>
+                        <p><strong>Nickname:</strong> <span id="profile-nickname"></span></p>
+                        <p><strong>Email:</strong> <span id="profile-email"></span></p>
+                        <p><strong>Name:</strong> <span id="profile-name"></span></p>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
+
