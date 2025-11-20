@@ -903,6 +903,17 @@ function setupKeyboardNavigation() {
             }
         }
     });
+
+    // Enter key to send message in chat (Shift+Enter for new line)
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey && e.target.id === 'message-input') {
+            e.preventDefault();
+            const form = e.target.closest('form');
+            if (form) {
+                form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+            }
+        }
+    });
 }
 
 // Performance: Debounce function
