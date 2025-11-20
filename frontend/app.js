@@ -204,6 +204,7 @@ async function handleLogout() {
 
 // Verify existing session
 async function verifySession() {
+    console.log('Verifying session with token:', state.token ? state.token.substring(0, 10) + '...' : 'null');
     try {
         const response = await fetch(`${API_URL}/auth/me`, {
             method: 'GET',
@@ -213,12 +214,15 @@ async function verifySession() {
         });
 
         const data = await response.json();
+        console.log('Session verification response:', data);
 
         if (data.success && data.user) {
             state.currentUser = data.user;
+            console.log('Session valid, showing main view');
             showMainView();
         } else {
             // Invalid session
+            console.log('Session invalid:', data.message);
             localStorage.removeItem('token');
             state.token = null;
             showAuthView();
@@ -706,6 +710,9 @@ async function openChat(userId, nickname) {
     
     // Load initial messages (10)
     await loadMessages(userId, true);
+    
+    // Reload conversations to clear unread count badge
+    await loadConversations();
     
     // Set up scroll listener for loading more messages
     const container = document.getElementById('messages-container');

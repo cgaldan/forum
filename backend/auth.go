@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -189,16 +190,20 @@ func meHandler(w http.ResponseWriter, r *http.Request) {
 
 	token := r.Header.Get("Authorization")
 	if token == "" {
+		log.Println("meHandler: No token provided")
 		json.NewEncoder(w).Encode(AuthResponse{Success: false, Message: "No token provided"})
 		return
 	}
 
+	log.Printf("meHandler: Verifying token: %s...\n", token[:10])
 	user, err := getUserFromSession(token)
 	if err != nil {
+		log.Printf("meHandler: Session validation failed: %v\n", err)
 		json.NewEncoder(w).Encode(AuthResponse{Success: false, Message: "Invalid or expired session"})
 		return
 	}
 
+	log.Printf("meHandler: Session valid for user: %s\n", user.Nickname)
 	json.NewEncoder(w).Encode(AuthResponse{Success: true, User: user})
 }
 
