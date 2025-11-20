@@ -651,8 +651,10 @@ function renderOnlineUsers() {
         return;
     }
 
-    // Filter out current user
-    const otherUsers = state.onlineUsers.filter(u => u.user_id !== state.currentUser.id);
+    // Filter out current user and sort alphabetically by nickname
+    const otherUsers = state.onlineUsers
+        .filter(u => u.user_id !== state.currentUser.id)
+        .sort((a, b) => a.nickname.localeCompare(b.nickname));
 
     container.innerHTML = otherUsers.map(user => `
         <div class="user-item" onclick="openChat(${user.user_id}, '${escapeHtml(user.nickname)}')">
