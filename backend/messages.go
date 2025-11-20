@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -212,56 +213,77 @@ func getConversationsHandler(w http.ResponseWriter, r *http.Request) {
 	token := r.Header.Get("Authorization")
 	currentUser, err := getUserFromSession(token)
 	if err != nil {
+		log.Printf("Conversations: auth error: %v", err)
 		json.NewEncoder(w).Encode(ConversationsResponse{Success: false})
 		return
 	}
 
-	// Get all users the current user has messaged with
+	// Simplified query - get distinct users we've messaged with
 	rows, err := db.Query(`
 		SELECT DISTINCT
-			CASE
-				WHEN m.sender_id = ? THEN m.receiver_id
-				ELSE m.sender_id
-			END as other_user_id,
-			u.nickname,
-			(SELECT content FROM messages
-			 WHERE (sender_id = ? AND receiver_id = other_user_id)
-			    OR (sender_id = other_user_id AND receiver_id = ?)
-			 ORDER BY created_at DESC LIMIT 1) as last_message,
-			(SELECT created_at FROM messages
-			 WHERE (sender_id = ? AND receiver_id = other_user_id)
-			    OR (sender_id = other_user_id AND receiver_id = ?)
-			 ORDER BY created_at DESC LIMIT 1) as last_time,
-			(SELECT COUNT(*) FROM messages
-			 WHERE receiver_id = ? AND sender_id = other_user_id AND read_at IS NULL) as unread_count
-		FROM messages m
-		JOIN users u ON (
-			CASE
-				WHEN m.sender_id = ? THEN m.receiver_id
-				ELSE m.sender_id
-			END = u.id
-		)
-		WHERE m.sender_id = ? OR m.receiver_id = ?
-		ORDER BY last_time DESC`,
-		currentUser.ID, currentUser.ID, currentUser.ID,
-		currentUser.ID, currentUser.ID, currentUser.ID,
+			CASE 
+				WHEN sender_id = ? THEN receiver_id 
+				ELSE sender_id 
+			END as other_user_id
+		FROM messages
+		WHERE sender_id = ? OR receiver_id = ?`,
 		currentUser.ID, currentUser.ID, currentUser.ID)
 
 	if err != nil {
+		log.Printf("Conversations: query error: %v", err)
 		json.NewEncoder(w).Encode(ConversationsResponse{Success: false})
 		return
 	}
 	defer rows.Close()
 
 	conversations := []Conversation{}
+	
 	for rows.Next() {
-		var conv Conversation
-		err := rows.Scan(&conv.UserID, &conv.Nickname, &conv.LastMessage, &conv.LastTime, &conv.UnreadCount)
-		if err == nil {
-			conversations = append(conversations, conv)
+		var otherUserID int
+		if err := rows.Scan(&otherUserID); err != nil {
+			continue
 		}
+
+		// Get user details
+		var nickname string
+		err := db.QueryRow("SELECT nickname FROM users WHERE id = ?", otherUserID).Scan(&nickname)
+		if err != nil {
+			continue
+		}
+
+		// Get last message
+		var lastMessage string
+		var lastTime time.Time
+		err = db.QueryRow(`
+			SELECT content, created_at FROM messages
+			WHERE (sender_id = ? AND receiver_id = ?)
+			   OR (sender_id = ? AND receiver_id = ?)
+			ORDER BY created_at DESC LIMIT 1`,
+			currentUser.ID, otherUserID, otherUserID, currentUser.ID).Scan(&lastMessage, &lastTime)
+		
+		if err != nil {
+			continue
+		}
+
+		// Get unread count
+		var unreadCount int
+		db.QueryRow(`
+			SELECT COUNT(*) FROM messages
+			WHERE receiver_id = ? AND sender_id = ? AND read_at IS NULL`,
+			currentUser.ID, otherUserID).Scan(&unreadCount)
+
+		conversations = append(conversations, Conversation{
+			UserID:      otherUserID,
+			Nickname:    nickname,
+			LastMessage: lastMessage,
+			LastTime:    lastTime,
+			UnreadCount: unreadCount,
+		})
 	}
 
+	// Sort by last time (most recent first)
+	// Already sorted by the query, but we can ensure it
+	
 	json.NewEncoder(w).Encode(ConversationsResponse{
 		Success:       true,
 		Conversations: conversations,

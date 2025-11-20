@@ -15,7 +15,10 @@ const state = {
     onlineUsers: [],
     currentChatUser: null,
     messages: [],
-    conversations: []
+    conversations: [],
+    messageOffset: 0,
+    hasMoreMessages: true,
+    isLoadingMessages: false
 };
 
 // Initialize app
@@ -292,22 +295,16 @@ function showToast(message, type = 'info') {
 function showLoading(containerId) {
     const container = document.getElementById(containerId);
     if (container) {
-        container.innerHTML = '<div class="spinner"></div>';
+        container.innerHTML = '<div class="loading">Loading...</div>';
     }
-}
-
-function showSkeletonPosts() {
-    const container = document.getElementById('posts-container');
-    container.innerHTML = `
-        <div class="skeleton skeleton-post"></div>
-        <div class="skeleton skeleton-post"></div>
-        <div class="skeleton skeleton-post"></div>
-    `;
 }
 
 // Post Management
 async function loadPosts(category = '') {
-    showSkeletonPosts();
+    const container = document.getElementById('posts-container');
+    if (container) {
+        container.innerHTML = '<div class="loading">Loading posts...</div>';
+    }
     
     try {
         let url = `${API_URL}/posts`;
@@ -331,8 +328,9 @@ async function loadPosts(category = '') {
         }
     } catch (error) {
         console.error('Load posts error:', error);
-        document.getElementById('posts-container').innerHTML = 
-            '<div class="no-posts">Failed to load posts. Please try again.</div>';
+        if (container) {
+            container.innerHTML = '<div class="no-posts">Failed to load posts. Please try again.</div>';
+        }
         showToast('Failed to load posts', 'error');
     }
 }
@@ -699,17 +697,36 @@ function renderConversations() {
 
 async function openChat(userId, nickname) {
     state.currentChatUser = { id: userId, nickname };
+    state.messages = [];
+    state.messageOffset = 0;
+    state.hasMoreMessages = true;
     
     document.getElementById('chat-user-name').textContent = nickname;
     document.getElementById('message-panel').classList.remove('hidden');
     
-    // Load message history
-    await loadMessages(userId);
+    // Load initial messages (10)
+    await loadMessages(userId, true);
+    
+    // Set up scroll listener for loading more messages
+    const container = document.getElementById('messages-container');
+    container.removeEventListener('scroll', handleMessageScroll);
+    container.addEventListener('scroll', handleMessageScroll);
 }
 
-async function loadMessages(userId) {
+async function loadMessages(userId, isInitial = false) {
+    if (state.isLoadingMessages || (!state.hasMoreMessages && !isInitial)) {
+        return;
+    }
+
+    state.isLoadingMessages = true;
+    const container = document.getElementById('messages-container');
+    
+    // Save scroll position before loading
+    const previousScrollHeight = container.scrollHeight;
+    const previousScrollTop = container.scrollTop;
+
     try {
-        const response = await fetch(`${API_URL}/messages/${userId}`, {
+        const response = await fetch(`${API_URL}/messages/${userId}?limit=10&offset=${state.messageOffset}`, {
             headers: {
                 'Authorization': state.token
             }
@@ -717,11 +734,43 @@ async function loadMessages(userId) {
 
         const data = await response.json();
         if (data.success) {
-            state.messages = data.messages || [];
-            renderMessages();
+            const newMessages = data.messages || [];
+            
+            if (newMessages.length < 10) {
+                state.hasMoreMessages = false;
+            }
+            
+            if (newMessages.length > 0) {
+                // Prepend new messages to the beginning (they're older)
+                state.messages = [...newMessages, ...state.messages];
+                state.messageOffset += newMessages.length;
+                
+                renderMessages();
+                
+                if (isInitial) {
+                    // Scroll to bottom for initial load
+                    container.scrollTop = container.scrollHeight;
+                } else {
+                    // Maintain scroll position after loading older messages
+                    container.scrollTop = container.scrollHeight - previousScrollHeight + previousScrollTop;
+                }
+            }
         }
     } catch (error) {
         console.error('Load messages error:', error);
+    } finally {
+        state.isLoadingMessages = false;
+    }
+}
+
+function handleMessageScroll() {
+    const container = document.getElementById('messages-container');
+    
+    // Check if scrolled to top (with 50px threshold)
+    if (container.scrollTop < 50 && state.hasMoreMessages && !state.isLoadingMessages) {
+        if (state.currentChatUser) {
+            loadMessages(state.currentChatUser.id, false);
+        }
     }
 }
 
@@ -733,7 +782,19 @@ function renderMessages() {
         return;
     }
 
-    container.innerHTML = state.messages.map(msg => {
+    let html = '';
+    
+    // Show loading indicator at top if loading more
+    if (state.isLoadingMessages && state.messageOffset > 0) {
+        html += '<div class="loading-more">Loading older messages...</div>';
+    }
+    
+    // Show "no more messages" if we've loaded all
+    if (!state.hasMoreMessages && state.messages.length > 10) {
+        html += '<div class="no-more-messages">No more messages</div>';
+    }
+    
+    html += state.messages.map(msg => {
         const isSent = msg.sender_id === state.currentUser.id;
         return `
             <div class="message-bubble ${isSent ? 'sent' : 'received'}">
@@ -743,9 +804,8 @@ function renderMessages() {
             </div>
         `;
     }).join('');
-
-    // Scroll to bottom
-    container.scrollTop = container.scrollHeight;
+    
+    container.innerHTML = html;
 }
 
 async function handleSendMessage(e) {
@@ -785,6 +845,10 @@ function handleNewMessage(message) {
          message.receiver_id === state.currentChatUser.id)) {
         state.messages.push(message);
         renderMessages();
+        
+        // Scroll to bottom for new messages
+        const container = document.getElementById('messages-container');
+        container.scrollTop = container.scrollHeight;
     }
 
     // Reload conversations to update unread count
@@ -795,6 +859,12 @@ function closeChatPanel() {
     document.getElementById('message-panel').classList.add('hidden');
     state.currentChatUser = null;
     state.messages = [];
+    state.messageOffset = 0;
+    state.hasMoreMessages = true;
+    
+    // Remove scroll listener
+    const container = document.getElementById('messages-container');
+    container.removeEventListener('scroll', handleMessageScroll);
 }
 
 // Keyboard Navigation

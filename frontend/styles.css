@@ -466,6 +466,22 @@ body {
     font-size: 1.1em;
 }
 
+.loading-more {
+    text-align: center;
+    color: #667eea;
+    padding: 10px;
+    font-size: 0.9em;
+    font-weight: 600;
+}
+
+.no-more-messages {
+    text-align: center;
+    color: #aaa;
+    padding: 10px;
+    font-size: 0.85em;
+    font-style: italic;
+}
+
 .message-input-form {
     padding: 20px;
     border-top: 2px solid #e0e0e0;
