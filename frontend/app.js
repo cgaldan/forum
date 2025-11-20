@@ -183,6 +183,9 @@ async function handleLogout() {
     // Disconnect WebSocket
     disconnectWebSocket();
 
+    // Close chat panel if open
+    closeChatPanel();
+
     try {
         await fetch(`${API_URL}/auth/logout`, {
             method: 'POST',
@@ -194,11 +197,8 @@ async function handleLogout() {
         console.error('Logout error:', error);
     }
 
-    // Clear state regardless of API response
-    state.token = null;
-    state.currentUser = null;
-    state.onlineUsers = [];
-    localStorage.removeItem('token');
+    // Clear all state regardless of API response
+    clearAllState();
     showAuthView();
 }
 
@@ -221,18 +221,32 @@ async function verifySession() {
             console.log('Session valid, showing main view');
             showMainView();
         } else {
-            // Invalid session
+            // Invalid session - clear all state
             console.log('Session invalid:', data.message);
-            localStorage.removeItem('token');
-            state.token = null;
+            clearAllState();
             showAuthView();
         }
     } catch (error) {
         console.error('Session verification error:', error);
-        localStorage.removeItem('token');
-        state.token = null;
+        clearAllState();
         showAuthView();
     }
+}
+
+// Helper function to clear all state
+function clearAllState() {
+    state.token = null;
+    state.currentUser = null;
+    state.onlineUsers = [];
+    state.currentChatUser = null;
+    state.messages = [];
+    state.conversations = [];
+    state.posts = [];
+    state.currentPost = null;
+    state.messageOffset = 0;
+    state.hasMoreMessages = true;
+    state.isLoadingMessages = false;
+    localStorage.removeItem('token');
 }
 
 // View management
@@ -242,6 +256,32 @@ function showAuthView() {
     document.getElementById('main-view').classList.remove('active');
     document.getElementById('main-view').classList.add('hidden');
     state.currentView = 'auth';
+    
+    // Clear UI elements to prevent data leakage
+    const messagePanel = document.getElementById('message-panel');
+    if (messagePanel) {
+        messagePanel.classList.add('hidden');
+    }
+    
+    const messagesContainer = document.getElementById('messages-container');
+    if (messagesContainer) {
+        messagesContainer.innerHTML = '<div class="no-messages">Select a user to start chatting</div>';
+    }
+    
+    const conversationsContainer = document.getElementById('conversations-container');
+    if (conversationsContainer) {
+        conversationsContainer.innerHTML = '<div class="no-conversations">No conversations yet</div>';
+    }
+    
+    const onlineUsersContainer = document.getElementById('online-users-container');
+    if (onlineUsersContainer) {
+        onlineUsersContainer.innerHTML = '<div class="loading">Loading...</div>';
+    }
+    
+    const postsContainer = document.getElementById('posts-container');
+    if (postsContainer) {
+        postsContainer.innerHTML = '<div class="loading">Loading posts...</div>';
+    }
 }
 
 function showMainView() {
