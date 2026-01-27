@@ -9,7 +9,6 @@ import (
 	"forum-backend/pkg/logger"
 )
 
-// Hub maintains active WebSocket connections
 type Hub struct {
 	clients    map[int]*Client
 	broadcast  chan []byte
@@ -20,7 +19,6 @@ type Hub struct {
 	userRepo   *repository.UserRepository
 }
 
-// NewHub creates a new Hub
 func NewHub(logger *logger.Logger, userRepo *repository.UserRepository) *Hub {
 	return &Hub{
 		clients:    make(map[int]*Client),
@@ -32,7 +30,6 @@ func NewHub(logger *logger.Logger, userRepo *repository.UserRepository) *Hub {
 	}
 }
 
-// Run starts the hub
 func (h *Hub) Run() {
 	for {
 		select {
@@ -41,13 +38,10 @@ func (h *Hub) Run() {
 			h.clients[client.UserID] = client
 			h.mu.Unlock()
 
-			// Update user status to online
 			h.userRepo.UpdateLastSeen(client.UserID)
 
-			// Broadcast user came online
 			h.broadcastUserStatus(client.UserID, true)
 
-			// Send current online users to the new client
 			h.sendOnlineUsers(client)
 
 			h.logger.Info("WebSocket client connected", "userID", client.UserID, "totalClients", len(h.clients))
@@ -60,10 +54,8 @@ func (h *Hub) Run() {
 			}
 			h.mu.Unlock()
 
-			// Update user status to offline
 			h.userRepo.UpdateLastSeen(client.UserID)
 
-			// Broadcast user went offline
 			h.broadcastUserStatus(client.UserID, false)
 
 			h.logger.Info("WebSocket client disconnected", "userID", client.UserID, "totalClients", len(h.clients))
@@ -126,7 +118,6 @@ func (h *Hub) BroadcastMessage(msg *domain.Message, receiverID int) {
 }
 
 func (h *Hub) broadcastUserStatus(userID int, online bool) {
-	// Get user nickname
 	user, err := h.userRepo.GetByID(userID)
 	if err != nil {
 		h.logger.Error("Failed to get user for status broadcast", "error", err, "userID", userID)
@@ -150,7 +141,11 @@ func (h *Hub) broadcastUserStatus(userID int, online bool) {
 		return
 	}
 
-	h.broadcast <- data
+	for id, client := range h.clients {
+		if id != userID {
+			client.Send <- data
+		}
+	}
 }
 
 func (h *Hub) sendOnlineUsers(client *Client) {
@@ -199,4 +194,3 @@ func (h *Hub) GetOnlineUsers() []int {
 	}
 	return userIDs
 }
-

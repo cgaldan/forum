@@ -582,6 +582,7 @@ function connectWebSocket() {
 
         state.ws.onmessage = (event) => {
             try {
+                console.log("RAW WS MESSAGE:", event.data)
                 const message = JSON.parse(event.data);
                 handleWebSocketMessage(message);
             } catch (error) {
@@ -686,15 +687,19 @@ function handleUserStatus(payload) {
 function renderOnlineUsers() {
     const container = document.getElementById('online-users-container');
     
-    if (state.onlineUsers.length === 0) {
-        container.innerHTML = '<div class="no-conversations">No users online</div>';
+    if (!state.onlineUsers) {
+        container.innerHTML = '<div class ="loading">Loading...</div>';
         return;
     }
 
-    // Filter out current user and sort alphabetically by nickname
     const otherUsers = state.onlineUsers
         .filter(u => u.user_id !== state.currentUser.id)
         .sort((a, b) => a.nickname.localeCompare(b.nickname));
+
+    if (otherUsers.length === 0) {
+        container.innerHTML = '<div class="no-conversations">No other users online</div>';
+        return;
+    }
 
     container.innerHTML = otherUsers.map(user => `
         <div class="user-item" onclick="openChat(${user.user_id}, '${escapeHtml(user.nickname)}')">
