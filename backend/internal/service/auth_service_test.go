@@ -1,67 +1,22 @@
 package service
 
 import (
+	"real-time-forum/internal/domain"
 	"testing"
-
-	"forum-backend/internal/domain"
-	"forum-backend/internal/repository"
-	"forum-backend/pkg/logger"
 )
 
-func setupTestAuthService(t *testing.T) *AuthService {
-	db, err := repository.NewDatabase(":memory:")
-	if err != nil {
-		t.Fatalf("Failed to create test database: %v", err)
-	}
-
-	if err := repository.RunMigrations(db); err != nil {
-		t.Fatalf("Failed to run migrations: %v", err)
-	}
-
-	userRepo := repository.NewUserRepository(db)
-	sessionRepo := repository.NewSessionRepository(db)
-	log := logger.NewLogger(nil, logger.ErrorLevel)
-
-	return NewAuthService(userRepo, sessionRepo, log)
-}
-
 func TestAuthService_Register(t *testing.T) {
-	service := setupTestAuthService(t)
-
-	req := domain.RegisterRequest{
-		Nickname:  "testuser",
-		Email:     "test@example.com",
-		Password:  "password123",
-		FirstName: "John",
-		LastName:  "Doe",
-		Age:       25,
-		Gender:    "male",
-	}
-
-	user, token, err := service.Register(req)
-	if err != nil {
-		t.Fatalf("Failed to register user: %v", err)
-	}
-
-	if user.Nickname != "testuser" {
-		t.Errorf("Expected nickname 'testuser', got '%s'", user.Nickname)
-	}
-	if token == "" {
-		t.Error("Expected non-empty token")
-	}
-}
-
-func TestAuthService_Register_ValidationError(t *testing.T) {
-	service := setupTestAuthService(t)
+	services := SetupTestServices(t)
 
 	tests := []struct {
-		name string
-		req  domain.RegisterRequest
+		name        string
+		userData    domain.RegisterRequest
+		expectError bool
 	}{
 		{
-			name: "Short nickname",
-			req: domain.RegisterRequest{
-				Nickname:  "ab",
+			name: "valid registration",
+			userData: domain.RegisterRequest{
+				Nickname:  "testuser",
 				Email:     "test@example.com",
 				Password:  "password123",
 				FirstName: "John",
@@ -69,101 +24,222 @@ func TestAuthService_Register_ValidationError(t *testing.T) {
 				Age:       25,
 				Gender:    "male",
 			},
+			expectError: false,
 		},
 		{
-			name: "Invalid email",
-			req: domain.RegisterRequest{
+			name: "duplicate nickname",
+			userData: domain.RegisterRequest{
 				Nickname:  "testuser",
-				Email:     "invalid",
+				Email:     "different@example.com",
+				Password:  "password123",
+				FirstName: "Jane",
+				LastName:  "Smith",
+				Age:       30,
+				Gender:    "female",
+			},
+			expectError: true,
+		},
+		{
+			name: "invalid email",
+			userData: domain.RegisterRequest{
+				Nickname:  "user2",
+				Email:     "invalid-email",
 				Password:  "password123",
 				FirstName: "John",
 				LastName:  "Doe",
 				Age:       25,
 				Gender:    "male",
 			},
+			expectError: true,
 		},
 		{
-			name: "Short password",
-			req: domain.RegisterRequest{
-				Nickname:  "testuser",
-				Email:     "test@example.com",
-				Password:  "pass",
+			name: "weak password",
+			userData: domain.RegisterRequest{
+				Nickname:  "user3",
+				Email:     "user3@example.com",
+				Password:  "123",
 				FirstName: "John",
 				LastName:  "Doe",
 				Age:       25,
 				Gender:    "male",
 			},
+			expectError: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, _, err := service.Register(tt.req)
-			if err == nil {
-				t.Error("Expected validation error, got nil")
+			user, sessionID, err := services.Auth.Register(tt.userData)
+
+			if tt.expectError {
+				if err == nil {
+					t.Error("Expected error but got none")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+
+			if user == nil {
+				t.Fatal("Expected user but got nil")
+			}
+
+			if user.Nickname != tt.userData.Nickname {
+				t.Errorf("Expected nickname %s, got %s", tt.userData.Nickname, user.Nickname)
+			}
+
+			if user.Email != tt.userData.Email {
+				t.Errorf("Expected email %s, got %s", tt.userData.Email, user.Email)
+			}
+
+			if sessionID == "" {
+				t.Error("Expected non-empty session ID")
 			}
 		})
 	}
 }
 
 func TestAuthService_Login(t *testing.T) {
-	service := setupTestAuthService(t)
+	services := SetupTestServices(t)
 
-	// Register a user first
-	regReq := domain.RegisterRequest{
-		Nickname:  "testuser",
-		Email:     "test@example.com",
-		Password:  "password123",
-		FirstName: "John",
-		LastName:  "Doe",
-		Age:       25,
-		Gender:    "male",
+	userID := CreateTestUser(t, services, "testuser", "test@example.com", "password123", "John", "Doe", 25, "male")
+
+	tests := []struct {
+		name        string
+		loginData   domain.LoginRequest
+		expectError bool
+	}{
+		{
+			name: "valid login with nickname",
+			loginData: domain.LoginRequest{
+				Identifier: "testuser",
+				Password:   "password123",
+			},
+			expectError: false,
+		},
+		{
+			name: "valid login with email",
+			loginData: domain.LoginRequest{
+				Identifier: "test@example.com",
+				Password:   "password123",
+			},
+			expectError: false,
+		},
+		{
+			name: "invalid password",
+			loginData: domain.LoginRequest{
+				Identifier: "testuser",
+				Password:   "wrongpassword",
+			},
+			expectError: true,
+		},
+		{
+			name: "non-existent user",
+			loginData: domain.LoginRequest{
+				Identifier: "nonexistent",
+				Password:   "password123",
+			},
+			expectError: true,
+		},
 	}
-	service.Register(regReq)
 
-	// Login
-	loginReq := domain.LoginRequest{
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			user, sessionID, err := services.Auth.Login(tt.loginData)
+
+			if tt.expectError {
+				if err == nil {
+					t.Error("Expected error but got none")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+
+			if user == nil {
+				t.Fatal("Expected user but got nil")
+			}
+
+			if user.ID != userID {
+				t.Errorf("Expected user ID %d, got %d", userID, user.ID)
+			}
+
+			if sessionID == "" {
+				t.Error("Expected non-empty session ID")
+			}
+		})
+	}
+}
+
+func TestAuthService_ValidateSession(t *testing.T) {
+	services := SetupTestServices(t)
+
+	CreateTestUser(t, services, "testuser", "test@example.com", "password123", "John", "Doe", 25, "male")
+
+	_, sessionID, err := services.Auth.Login(domain.LoginRequest{
 		Identifier: "testuser",
 		Password:   "password123",
-	}
-
-	user, token, err := service.Login(loginReq)
+	})
 	if err != nil {
 		t.Fatalf("Failed to login: %v", err)
 	}
 
-	if user.Nickname != "testuser" {
-		t.Errorf("Expected nickname 'testuser', got '%s'", user.Nickname)
-	}
-	if token == "" {
-		t.Error("Expected non-empty token")
-	}
+	t.Run("valid session", func(t *testing.T) {
+		user, err := services.Auth.ValidateSession(sessionID)
+		if err != nil {
+			t.Fatalf("Failed to validate session: %v", err)
+		}
+
+		if user == nil {
+			t.Fatal("Expected user but got nil")
+		}
+
+		if user.Nickname != "testuser" {
+			t.Errorf("Expected nickname 'testuser', got '%s'", user.Nickname)
+		}
+	})
+
+	t.Run("invalid session", func(t *testing.T) {
+		_, err := services.Auth.ValidateSession("invalid-session-id")
+		if err == nil {
+			t.Error("Expected error for invalid session")
+		}
+	})
 }
 
-func TestAuthService_Login_InvalidCredentials(t *testing.T) {
-	service := setupTestAuthService(t)
+func TestAuthService_Logout(t *testing.T) {
+	services := SetupTestServices(t)
 
-	// Register a user first
-	regReq := domain.RegisterRequest{
-		Nickname:  "testuser",
-		Email:     "test@example.com",
-		Password:  "password123",
-		FirstName: "John",
-		LastName:  "Doe",
-		Age:       25,
-		Gender:    "male",
-	}
-	service.Register(regReq)
+	CreateTestUser(t, services, "testuser", "test@example.com", "password123", "John", "Doe", 25, "male")
 
-	// Login with wrong password
-	loginReq := domain.LoginRequest{
+	_, sessionID, err := services.Auth.Login(domain.LoginRequest{
 		Identifier: "testuser",
-		Password:   "wrongpassword",
+		Password:   "password123",
+	})
+	if err != nil {
+		t.Fatalf("Failed to login: %v", err)
 	}
 
-	_, _, err := service.Login(loginReq)
-	if err == nil {
-		t.Error("Expected error for invalid credentials, got nil")
-	}
+	t.Run("successful logout", func(t *testing.T) {
+		err := services.Auth.Logout(sessionID)
+		if err != nil {
+			t.Fatalf("Failed to logout: %v", err)
+		}
+
+		_, err = services.Auth.ValidateSession(sessionID)
+		if err == nil {
+			t.Error("Expected error after logout")
+		}
+	})
+
+	t.Run("logout with invalid session", func(t *testing.T) {
+		err := services.Auth.Logout("invalid-session-id")
+		if err != nil {
+			t.Errorf("Logout with invalid session should not error, got: %v", err)
+		}
+	})
 }
-
