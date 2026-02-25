@@ -2,7 +2,6 @@ package domain
 
 import "time"
 
-// User represents a user in the system
 type User struct {
 	ID        int       `json:"id"`
 	Nickname  string    `json:"nickname"`
@@ -15,7 +14,6 @@ type User struct {
 	LastSeen  time.Time `json:"last_seen"`
 }
 
-// Post represents a forum post
 type Post struct {
 	ID        int       `json:"id"`
 	UserID    int       `json:"user_id"`
@@ -27,7 +25,6 @@ type Post struct {
 	Author    string    `json:"author"`
 }
 
-// Comment represents a comment on a post
 type Comment struct {
 	ID        int       `json:"id"`
 	PostID    int       `json:"post_id"`
@@ -37,7 +34,6 @@ type Comment struct {
 	Author    string    `json:"author"`
 }
 
-// Message represents a private message
 type Message struct {
 	ID         int        `json:"id"`
 	SenderID   int        `json:"sender_id"`
@@ -48,7 +44,6 @@ type Message struct {
 	SenderName string     `json:"sender_name"`
 }
 
-// Session represents a user session
 type Session struct {
 	ID        string    `json:"id"`
 	UserID    int       `json:"user_id"`
@@ -56,7 +51,6 @@ type Session struct {
 	ExpiresAt time.Time `json:"expires_at"`
 }
 
-// Conversation represents a messaging conversation
 type Conversation struct {
 	UserID      int       `json:"user_id"`
 	Nickname    string    `json:"nickname"`
@@ -65,16 +59,14 @@ type Conversation struct {
 	UnreadCount int       `json:"unread_count"`
 }
 
-// PostDetail includes a post with its comments
 type PostDetail struct {
 	Post     *Post     `json:"post"`
 	Comments []Comment `json:"comments"`
 }
 
-// UserStatus represents online/offline status
 type UserStatus struct {
-	UserID   int    `json:"user_id"`
-	Nickname string `json:"nickname"`
-	Online   bool   `json:"online"`
+	UserID   int       `json:"user_id"`
+	Nickname string    `json:"nickname"`
+	Online   bool      `json:"online"`
+	LastSeen time.Time `json:"last_seen"`
 }
-
