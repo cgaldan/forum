@@ -2,63 +2,53 @@ package service
 
 import (
 	"fmt"
+	"real-time-forum/internal/domain"
+	"real-time-forum/internal/repository"
+	"real-time-forum/packages/logger"
 	"time"
-
-	"forum-backend/internal/domain"
-	"forum-backend/internal/repository"
-	"forum-backend/internal/websocket"
-	"forum-backend/pkg/logger"
 )
 
-// MessageService handles messaging business logic
 type MessageService struct {
-	messageRepo *repository.MessageRepository
-	userRepo    *repository.UserRepository
-	hub         *websocket.Hub
+	messageRepo repository.MessageRepositoryInterface
+	userRepo    repository.UserRepositoryInterface
 	logger      *logger.Logger
 }
 
-// NewMessageService creates a new message service
-func NewMessageService(messageRepo *repository.MessageRepository, userRepo *repository.UserRepository, hub *websocket.Hub, logger *logger.Logger) *MessageService {
+func NewMessageService(messageRepo repository.MessageRepositoryInterface, userRepo repository.UserRepositoryInterface, logger *logger.Logger) *MessageService {
 	return &MessageService{
 		messageRepo: messageRepo,
 		userRepo:    userRepo,
-		hub:         hub,
 		logger:      logger,
 	}
 }
 
-// SendMessage sends a message to a user
 func (s *MessageService) SendMessage(senderID, receiverID int, content string) (*domain.Message, error) {
-	// Validate
-	if content == "" || len(content) > 1000 {
-		return nil, fmt.Errorf("message must be 1-1000 characters")
+	if err := s.validateMessage(content); err != nil {
+		return nil, err
 	}
 
 	if receiverID == senderID {
-		return nil, fmt.Errorf("cannot message yourself")
+		return nil, fmt.Errorf("cannot send message to yourself")
 	}
 
-	// // Check if receiver exists
-	// receiver, err := s.userRepo.GetByID(receiverID)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("user not found")
-	// }
-
-	// Get sender info
-	sender, err := s.userRepo.GetByID(senderID)
+	_, err := s.userRepo.GetUserByID(receiverID)
 	if err != nil {
+		s.logger.Error("Failed to find receiver", "error", err, "receiverID", receiverID)
+		return nil, fmt.Errorf("receiver not found")
+	}
+
+	sender, err := s.userRepo.GetUserByID(senderID)
+	if err != nil {
+		s.logger.Error("Failed to find sender", "error", err, "senderID", senderID)
 		return nil, fmt.Errorf("sender not found")
 	}
 
-	// Create message
-	messageID, err := s.messageRepo.Create(senderID, receiverID, content)
+	messageID, err := s.messageRepo.CreateMessage(senderID, receiverID, content)
 	if err != nil {
-		s.logger.Error("Failed to create message", "error", err, "senderID", senderID, "receiverID", receiverID)
+		s.logger.Error("Failed to create message", "error", err)
 		return nil, fmt.Errorf("failed to send message")
 	}
 
-	// Build message object
 	message := &domain.Message{
 		ID:         int(messageID),
 		SenderID:   senderID,
@@ -68,16 +58,11 @@ func (s *MessageService) SendMessage(senderID, receiverID int, content string) (
 		SenderName: sender.Nickname,
 	}
 
-	// Broadcast via WebSocket
-	s.hub.BroadcastMessage(message, receiverID)
-
-	s.logger.Info("Message sent successfully", "messageID", messageID, "from", senderID, "to", receiverID)
+	s.logger.Info("Message sent successfully", "messageID", messageID, "senderID", senderID, "receiverID", receiverID)
 	return message, nil
 }
 
-// GetConversation gets messages between two users
-func (s *MessageService) GetConversation(user1ID, user2ID, limit, offset int) ([]domain.Message, error) {
-	// Validate pagination
+func (s *MessageService) GetConversation(userID1, userID2, limit, offset int) ([]domain.Message, error) {
 	if limit <= 0 || limit > 100 {
 		limit = 50
 	}
@@ -85,55 +70,64 @@ func (s *MessageService) GetConversation(user1ID, user2ID, limit, offset int) ([
 		offset = 0
 	}
 
-	messages, err := s.messageRepo.GetConversation(user1ID, user2ID, limit, offset)
+	messages, err := s.messageRepo.GetConversation(userID1, userID2, limit, offset)
 	if err != nil {
-		s.logger.Error("Failed to get conversation", "error", err)
-		return nil, fmt.Errorf("failed to fetch messages")
+		s.logger.Error("Failed to get conversation", "error", err, "userID1", userID1, "userID2", userID2)
+		return nil, fmt.Errorf("failed to get conversation")
 	}
 
-	// Mark messages as read
-	if err := s.messageRepo.MarkAsRead(user1ID, user2ID); err != nil {
-		s.logger.Warn("Failed to mark messages as read", "error", err)
+	if err := s.messageRepo.MarkMessageAsRead(userID1, userID2); err != nil {
+		s.logger.Error("Failed to mark messages as read", "error", err, "userID1", userID1, "userID2", userID2)
 	}
 
 	return messages, nil
 }
 
-// GetConversations gets all conversations for a user
-func (s *MessageService) GetConversations(userID int) ([]domain.Conversation, error) {
-	// Get conversation partners
+func (s *MessageService) GetConversationsByUserID(userID int) ([]domain.Conversation, error) {
 	partners, err := s.messageRepo.GetConversationPartners(userID)
 	if err != nil {
 		s.logger.Error("Failed to get conversation partners", "error", err, "userID", userID)
-		return nil, fmt.Errorf("failed to fetch conversations")
+		return nil, fmt.Errorf("failed to get conversations")
 	}
 
-	var conversations []domain.Conversation
+	var converstations []domain.Conversation
 	for _, partnerID := range partners {
-		// Get user details
-		user, err := s.userRepo.GetByID(partnerID)
+		user, err := s.userRepo.GetUserByID(partnerID)
 		if err != nil {
+			s.logger.Error("Failed to get conversation partner details", "error", err, "partnerID", partnerID)
 			continue
 		}
 
-		// Get last message
-		lastMsg, err := s.messageRepo.GetLastMessage(userID, partnerID)
+		lastMessage, err := s.messageRepo.GetLastMessageBetweenUsers(userID, partnerID)
 		if err != nil {
+			s.logger.Error("Failed to get last message for conversation", "error", err, "userID", userID, "partnerID", partnerID)
 			continue
 		}
 
-		// Get unread count
-		unreadCount, _ := s.messageRepo.GetUnreadCount(userID, partnerID)
+		unreadCount, err := s.messageRepo.GetUnreadMessagesCount(userID, partnerID)
+		if err != nil {
+			s.logger.Error("Failed to get unread message count for conversation", "error", err, "userID", userID, "partnerID", partnerID)
+			continue
+		}
 
-		conversations = append(conversations, domain.Conversation{
+		converstations = append(converstations, domain.Conversation{
 			UserID:      partnerID,
 			Nickname:    user.Nickname,
-			LastMessage: lastMsg.Content,
-			LastTime:    lastMsg.CreatedAt,
+			LastMessage: lastMessage.Content,
+			LastTime:    lastMessage.CreatedAt,
 			UnreadCount: unreadCount,
 		})
 	}
 
-	return conversations, nil
+	return converstations, nil
 }
 
+func (s *MessageService) validateMessage(content string) error {
+	if len(content) == 0 {
+		return fmt.Errorf("message content cannot be empty")
+	}
+	if len(content) > 1000 {
+		return fmt.Errorf("message content cannot exceed 1000 characters")
+	}
+	return nil
+}

@@ -2,21 +2,18 @@ package service
 
 import (
 	"fmt"
-
-	"forum-backend/internal/domain"
-	"forum-backend/internal/repository"
-	"forum-backend/pkg/logger"
+	"real-time-forum/internal/domain"
+	"real-time-forum/internal/repository"
+	"real-time-forum/packages/logger"
 )
 
-// CommentService handles comment business logic
 type CommentService struct {
-	commentRepo *repository.CommentRepository
-	postRepo    *repository.PostRepository
+	commentRepo repository.CommentRepositoryInterface
+	postRepo    repository.PostRepositoryInterface
 	logger      *logger.Logger
 }
 
-// NewCommentService creates a new comment service
-func NewCommentService(commentRepo *repository.CommentRepository, postRepo *repository.PostRepository, logger *logger.Logger) *CommentService {
+func NewCommentService(commentRepo repository.CommentRepositoryInterface, postRepo repository.PostRepositoryInterface, logger *logger.Logger) *CommentService {
 	return &CommentService{
 		commentRepo: commentRepo,
 		postRepo:    postRepo,
@@ -24,56 +21,56 @@ func NewCommentService(commentRepo *repository.CommentRepository, postRepo *repo
 	}
 }
 
-// CreateComment creates a new comment
-func (s *CommentService) CreateComment(postID, userID int, req domain.CreateCommentRequest) (*domain.Comment, error) {
-	// Validate
-	if req.Content == "" || len(req.Content) < 1 {
-		return nil, fmt.Errorf("comment cannot be empty")
+func (s *CommentService) CreateComment(userID int, postID int, commentData domain.CreateCommentRequest) (*domain.Comment, error) {
+	if err := s.validateComment(commentData); err != nil {
+		return nil, err
 	}
 
-	// Check if post exists
-	exists, err := s.postRepo.Exists(postID)
+	exists, err := s.postRepo.PostExists(postID)
 	if err != nil || !exists {
-		return nil, fmt.Errorf("post not found")
-	}
-
-	// Create comment
-	commentID, err := s.commentRepo.Create(postID, userID, req.Content)
-	if err != nil {
-		s.logger.Error("Failed to create comment", "error", err, "postID", postID, "userID", userID)
+		s.logger.Error("Failed to check if post exists", "error", err, "postID", postID)
 		return nil, fmt.Errorf("failed to create comment")
 	}
 
-	// Get created comment
-	comment, err := s.commentRepo.GetByID(int(commentID))
+	commentID, err := s.commentRepo.CreateComment(userID, postID, commentData.Content)
 	if err != nil {
-		s.logger.Error("Failed to get created comment", "error", err, "commentID", commentID)
-		return nil, fmt.Errorf("comment created but failed to retrieve")
+		s.logger.Error("Failed to create comment", "error", err)
+		return nil, fmt.Errorf("failed to create comment")
 	}
 
-	s.logger.Info("Comment created successfully", "commentID", commentID, "postID", postID, "userID", userID)
+	comment, err := s.commentRepo.GetCommentByID(int(commentID))
+	if err != nil {
+		s.logger.Error("Failed to retrieve created comment", "error", err, "commentID", commentID)
+		return nil, fmt.Errorf("failed to retrieve created comment")
+	}
+
+	s.logger.Info("Comment created successfully", "commentID", commentID, "userID", userID, "postID", postID)
 	return comment, nil
 }
 
-// GetCommentsByPost gets all comments for a post
-func (s *CommentService) GetCommentsByPost(postID int) ([]domain.Comment, error) {
-	comments, err := s.commentRepo.GetByPostID(postID)
+func (s *CommentService) GetCommentsByPostID(postID int) ([]domain.Comment, error) {
+	comments, err := s.commentRepo.GetCommentsByPostID(postID)
 	if err != nil {
-		s.logger.Error("Failed to get comments", "error", err, "postID", postID)
-		return nil, fmt.Errorf("failed to fetch comments")
+		s.logger.Error("Failed to get comments by post ID", "error", err, "postID", postID)
+		return nil, fmt.Errorf("failed to get comments for post")
 	}
 
 	return comments, nil
 }
 
-// GetUserComments gets comments by a specific user
-func (s *CommentService) GetUserComments(userID, limit, offset int) ([]domain.Comment, error) {
-	comments, err := s.commentRepo.GetByUserID(userID, limit, offset)
+func (s *CommentService) GetCommentsByUserID(userID, limit, offset int) ([]domain.Comment, error) {
+	comments, err := s.commentRepo.GetCommentsByUserID(userID, limit, offset)
 	if err != nil {
-		s.logger.Error("Failed to get user comments", "error", err, "userID", userID)
-		return nil, fmt.Errorf("failed to fetch user comments")
+		s.logger.Error("Failed to get comments by user ID", "error", err, "userID", userID)
+		return nil, fmt.Errorf("failed to get comments for user")
 	}
 
 	return comments, nil
 }
 
+func (s *CommentService) validateComment(commentData domain.CreateCommentRequest) error {
+	if commentData.Content == "" || len(commentData.Content) < 1 {
+		return fmt.Errorf("comment cannot be empty")
+	}
+	return nil
+}
