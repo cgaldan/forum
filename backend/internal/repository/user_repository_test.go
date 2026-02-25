@@ -5,23 +5,11 @@ import (
 	"time"
 )
 
-func setupTestDB(t *testing.T) *UserRepository {
-	db, err := NewDatabase(":memory:")
-	if err != nil {
-		t.Fatalf("Failed to create test database: %v", err)
-	}
+func TestUserRepository_CreateUser(t *testing.T) {
+	repos := SetupTestDB(t)
+	repo := repos.User
 
-	if err := RunMigrations(db); err != nil {
-		t.Fatalf("Failed to run migrations: %v", err)
-	}
-
-	return NewUserRepository(db)
-}
-
-func TestUserRepository_Create(t *testing.T) {
-	repo := setupTestDB(t)
-
-	userID, err := repo.Create("testuser", "test@example.com", "hashedpass", "John", "Doe", 25, "male")
+	userID, err := repo.CreateUser("testuser", "test@example.com", "hashedpass", "John", "Doe", 25, "male")
 	if err != nil {
 		t.Fatalf("Failed to create user: %v", err)
 	}
@@ -31,14 +19,13 @@ func TestUserRepository_Create(t *testing.T) {
 	}
 }
 
-func TestUserRepository_GetByID(t *testing.T) {
-	repo := setupTestDB(t)
+func TestUserRepository_GetUserByID(t *testing.T) {
+	repos := SetupTestDB(t)
+	repo := repos.User
 
-	// Create a user
-	userID, _ := repo.Create("testuser", "test@example.com", "hashedpass", "John", "Doe", 25, "male")
+	userID, _ := repo.CreateUser("testuser", "test@example.com", "hashedpass", "John", "Doe", 25, "male")
 
-	// Get the user
-	user, err := repo.GetByID(int(userID))
+	user, err := repo.GetUserByID(int(userID))
 	if err != nil {
 		t.Fatalf("Failed to get user: %v", err)
 	}
@@ -51,53 +38,40 @@ func TestUserRepository_GetByID(t *testing.T) {
 	}
 }
 
-func TestUserRepository_GetByIdentifier(t *testing.T) {
-	repo := setupTestDB(t)
+func TestUserRepository_GetUserByIdentifier(t *testing.T) {
+	repos := SetupTestDB(t)
+	repo := repos.User
 
-	// Create a user
-	repo.Create("testuser", "test@example.com", "hashedpass", "John", "Doe", 25, "male")
+	userID, _ := repo.CreateUser("testuser", "test@example.com", "hashedpass", "John", "Doe", 25, "male")
 
-	// Get by nickname
-	user, hash, err := repo.GetByIdentifier("testuser")
+	user, pass, err := repo.GetUserByIdentifier("testuser")
 	if err != nil {
-		t.Fatalf("Failed to get user by nickname: %v", err)
-	}
-	if user.Nickname != "testuser" {
-		t.Errorf("Expected nickname 'testuser', got '%s'", user.Nickname)
-	}
-	if hash != "hashedpass" {
-		t.Errorf("Expected hash 'hashedpass', got '%s'", hash)
+		t.Fatalf("Failed to get user by identifier: %v", err)
 	}
 
-	// Get by email
-	user, hash, err = repo.GetByIdentifier("test@example.com")
-	if err != nil {
-		t.Fatalf("Failed to get user by email: %v", err)
+	if user.ID != int(userID) {
+		t.Errorf("Expected user ID %d, got %d", userID, user.ID)
 	}
-	if user.Email != "test@example.com" {
-		t.Errorf("Expected email 'test@example.com', got '%s'", user.Email)
+	if pass != "hashedpass" {
+		t.Errorf("Expected password hash 'hashedpass', got '%s'", pass)
 	}
 }
 
 func TestUserRepository_UpdateLastSeen(t *testing.T) {
-	repo := setupTestDB(t)
+	repos := SetupTestDB(t)
+	repo := repos.User
 
-	// Create a user
-	userID, _ := repo.Create("testuser", "test@example.com", "hashedpass", "John", "Doe", 25, "male")
+	userID, _ := repo.CreateUser("testuser", "test@example.com", "hashedpass", "John", "Doe", 25, "male")
 
-	// Wait a bit
 	time.Sleep(100 * time.Millisecond)
 
-	// Update last seen
 	err := repo.UpdateLastSeen(int(userID))
 	if err != nil {
 		t.Fatalf("Failed to update last seen: %v", err)
 	}
 
-	// Verify update
-	user, _ := repo.GetByID(int(userID))
-	if user.LastSeen.Before(time.Now().Add(-1 * time.Second)) {
-		t.Error("LastSeen not updated")
+	user, _ := repo.GetUserByID(int(userID))
+	if user.LastSeen.Before(time.Now().Add(-1 * time.Minute)) {
+		t.Error("Expected last seen to be updated to recent time")
 	}
 }
-

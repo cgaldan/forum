@@ -1,4 +1,4 @@
-package repository
+package database
 
 import (
 	"database/sql"
@@ -9,35 +9,29 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-// NewDatabase creates a new database connection
 func NewDatabase(dbPath string) (*sql.DB, error) {
-	// Ensure the directory exists
 	dir := filepath.Dir(dbPath)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create database directory: %w", err)
 	}
 
-	// Open database connection
 	db, err := sql.Open("sqlite3", dbPath+"?_foreign_keys=on")
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 
-	// Test connection
 	if err := db.Ping(); err != nil {
-		db.Close()
-		return nil, fmt.Errorf("failed to ping database: %w", err)
+		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 
-	// Set connection pool settings
 	db.SetMaxOpenConns(25)
-	db.SetMaxIdleConns(5)
+	db.SetMaxIdleConns(25)
 
 	return db, nil
 }
 
-// RunMigrations runs database migrations
 func RunMigrations(db *sql.DB) error {
+
 	migrations := []string{
 		`CREATE TABLE IF NOT EXISTS users (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -87,11 +81,9 @@ func RunMigrations(db *sql.DB) error {
 			FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
 			FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE
 		);`,
-		// Indexes for better performance
-		`CREATE INDEX IF NOT EXISTS idx_users_nickname ON users(nickname);`,
+
 		`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);`,
-		`CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);`,
-		`CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at);`,
+		`CREATE INDEX IF NOT EXISTS idx_users_nickname ON users(nickname);`,
 		`CREATE INDEX IF NOT EXISTS idx_posts_user_id ON posts(user_id);`,
 		`CREATE INDEX IF NOT EXISTS idx_posts_category ON posts(category);`,
 		`CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts(created_at);`,
@@ -104,10 +96,9 @@ func RunMigrations(db *sql.DB) error {
 
 	for _, migration := range migrations {
 		if _, err := db.Exec(migration); err != nil {
-			return fmt.Errorf("migration failed: %w", err)
+			return fmt.Errorf("failed to run migration: %w", err)
 		}
 	}
 
 	return nil
 }
-
