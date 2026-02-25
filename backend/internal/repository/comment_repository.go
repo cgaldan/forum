@@ -3,26 +3,22 @@ package repository
 import (
 	"database/sql"
 	"fmt"
-
-	"forum-backend/internal/domain"
+	"real-time-forum/internal/domain"
 )
 
-// CommentRepository handles comment data access
 type CommentRepository struct {
 	db *sql.DB
 }
 
-// NewCommentRepository creates a new comment repository
 func NewCommentRepository(db *sql.DB) *CommentRepository {
 	return &CommentRepository{db: db}
 }
 
-// Create creates a new comment
-func (r *CommentRepository) Create(postID, userID int, content string) (int64, error) {
+func (r *CommentRepository) CreateComment(postID, userID int, content string) (int64, error) {
 	result, err := r.db.Exec(`
 		INSERT INTO comments (post_id, user_id, content)
 		VALUES (?, ?, ?)`, postID, userID, content)
-	
+
 	if err != nil {
 		return 0, fmt.Errorf("failed to create comment: %w", err)
 	}
@@ -30,8 +26,7 @@ func (r *CommentRepository) Create(postID, userID int, content string) (int64, e
 	return result.LastInsertId()
 }
 
-// GetByPostID gets all comments for a post
-func (r *CommentRepository) GetByPostID(postID int) ([]domain.Comment, error) {
+func (r *CommentRepository) GetCommentsByPostID(postID int) ([]domain.Comment, error) {
 	rows, err := r.db.Query(`
 		SELECT c.id, c.post_id, c.user_id, c.content, c.created_at, u.nickname
 		FROM comments c
@@ -57,14 +52,13 @@ func (r *CommentRepository) GetByPostID(postID int) ([]domain.Comment, error) {
 	return comments, nil
 }
 
-// GetByID gets a comment by ID
-func (r *CommentRepository) GetByID(id int) (*domain.Comment, error) {
+func (r *CommentRepository) GetCommentByID(commentID int) (*domain.Comment, error) {
 	var comment domain.Comment
 	err := r.db.QueryRow(`
 		SELECT c.id, c.post_id, c.user_id, c.content, c.created_at, u.nickname
 		FROM comments c
 		JOIN users u ON c.user_id = u.id
-		WHERE c.id = ?`, id).Scan(
+		WHERE c.id = ?`, commentID).Scan(
 		&comment.ID, &comment.PostID, &comment.UserID, &comment.Content,
 		&comment.CreatedAt, &comment.Author)
 
@@ -78,8 +72,7 @@ func (r *CommentRepository) GetByID(id int) (*domain.Comment, error) {
 	return &comment, nil
 }
 
-// GetByUserID gets comments by a specific user
-func (r *CommentRepository) GetByUserID(userID, limit, offset int) ([]domain.Comment, error) {
+func (r *CommentRepository) GetCommentsByUserID(userID int, limit, offset int) ([]domain.Comment, error) {
 	rows, err := r.db.Query(`
 		SELECT c.id, c.post_id, c.user_id, c.content, c.created_at, u.nickname
 		FROM comments c
@@ -104,4 +97,3 @@ func (r *CommentRepository) GetByUserID(userID, limit, offset int) ([]domain.Com
 
 	return comments, nil
 }
-
