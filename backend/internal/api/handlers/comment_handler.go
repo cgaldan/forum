@@ -3,24 +3,20 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"real-time-forum/internal/domain"
+	"real-time-forum/internal/service"
+	"real-time-forum/packages/logger"
 	"strconv"
-
-	"forum-backend/internal/domain"
-	"forum-backend/internal/service"
-	"forum-backend/pkg/logger"
-
-	"github.com/gorilla/mux"
+	"strings"
 )
 
-// CommentHandler handles comment endpoints
 type CommentHandler struct {
-	commentService *service.CommentService
-	authService    *service.AuthService
+	commentService service.CommentServiceInterface
+	authService    service.AuthServiceInterface
 	logger         *logger.Logger
 }
 
-// NewCommentHandler creates a new comment handler
-func NewCommentHandler(commentService *service.CommentService, authService *service.AuthService, logger *logger.Logger) *CommentHandler {
+func NewCommentHandler(commentService service.CommentServiceInterface, authService service.AuthServiceInterface, logger *logger.Logger) *CommentHandler {
 	return &CommentHandler{
 		commentService: commentService,
 		authService:    authService,
@@ -28,34 +24,65 @@ func NewCommentHandler(commentService *service.CommentService, authService *serv
 	}
 }
 
-// CreateComment handles creating a new comment
 func (h *CommentHandler) CreateComment(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	// Get user from session
-	token := r.Header.Get("Authorization")
-	user, err := h.authService.ValidateSession(token)
-	if err != nil {
-		json.NewEncoder(w).Encode(domain.CommentResponse{Success: false, Message: "Unauthorized"})
+	tokenString := r.Header.Get("Authorization")
+	if tokenString == "" {
+		json.NewEncoder(w).Encode(domain.CommentResponse{
+			Success: false,
+			Message: "Missing authorization token",
+		})
 		return
 	}
 
-	vars := mux.Vars(r)
-	postID, err := strconv.Atoi(vars["id"])
+	user, err := h.authService.ValidateSession(tokenString)
 	if err != nil {
-		json.NewEncoder(w).Encode(domain.CommentResponse{Success: false, Message: "Invalid post ID"})
+		json.NewEncoder(w).Encode(domain.CommentResponse{
+			Success: false,
+			Message: "Unauthorized",
+		})
 		return
 	}
 
-	var req domain.CreateCommentRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		json.NewEncoder(w).Encode(domain.CommentResponse{Success: false, Message: "Invalid JSON"})
+	segments := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	if len(segments) < 2 {
+		json.NewEncoder(w).Encode(domain.CommentResponse{
+			Success: false,
+			Message: "Invalid URL",
+		})
 		return
 	}
 
-	comment, err := h.commentService.CreateComment(postID, user.ID, req)
+	postID, err := strconv.Atoi(segments[len(segments)-2])
+
+	// WITH GORILLA PKG IMPLEMANTATION
+	// vars := mux.Vars(r)
+	// postID, err := strconv.Atoi(vars["id"])
+
+	if err != nil || postID <= 0 {
+		json.NewEncoder(w).Encode(domain.CommentResponse{
+			Success: false,
+			Message: "Invalid post ID",
+		})
+		return
+	}
+
+	var commentRequest domain.CreateCommentRequest
+	if err := json.NewDecoder(r.Body).Decode(&commentRequest); err != nil {
+		json.NewEncoder(w).Encode(domain.CommentResponse{
+			Success: false,
+			Message: "Invalid request payload",
+		})
+		return
+	}
+
+	comment, err := h.commentService.CreateComment(user.ID, postID, commentRequest)
 	if err != nil {
-		json.NewEncoder(w).Encode(domain.CommentResponse{Success: false, Message: err.Error()})
+		json.NewEncoder(w).Encode(domain.CommentResponse{
+			Success: false,
+			Message: err.Error(),
+		})
 		return
 	}
 
@@ -65,4 +92,3 @@ func (h *CommentHandler) CreateComment(w http.ResponseWriter, r *http.Request) {
 		Comment: comment,
 	})
 }
-

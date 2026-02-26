@@ -3,24 +3,20 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"path"
+	"real-time-forum/internal/domain"
+	"real-time-forum/internal/service"
+	"real-time-forum/packages/logger"
 	"strconv"
-
-	"forum-backend/internal/domain"
-	"forum-backend/internal/service"
-	"forum-backend/pkg/logger"
-
-	"github.com/gorilla/mux"
 )
 
-// PostHandler handles post endpoints
 type PostHandler struct {
-	postService *service.PostService
-	authService *service.AuthService
+	postService service.PostServiceInterface
+	authService service.AuthServiceInterface
 	logger      *logger.Logger
 }
 
-// NewPostHandler creates a new post handler
-func NewPostHandler(postService *service.PostService, authService *service.AuthService, logger *logger.Logger) *PostHandler {
+func NewPostHandler(postService service.PostServiceInterface, authService service.AuthServiceInterface, logger *logger.Logger) *PostHandler {
 	return &PostHandler{
 		postService: postService,
 		authService: authService,
@@ -28,90 +24,123 @@ func NewPostHandler(postService *service.PostService, authService *service.AuthS
 	}
 }
 
-// GetPosts handles listing posts
 func (h *PostHandler) GetPosts(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	// Get query parameters
 	category := r.URL.Query().Get("category")
 	limitStr := r.URL.Query().Get("limit")
 	offsetStr := r.URL.Query().Get("offset")
 
 	limit := 20
 	if limitStr != "" {
-		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 100 {
-			limit = l
+		if limitNum, err := strconv.Atoi(limitStr); err == nil && limitNum > 0 && limitNum <= 100 {
+			limit = limitNum
 		}
 	}
 
 	offset := 0
 	if offsetStr != "" {
-		if o, err := strconv.Atoi(offsetStr); err == nil && o >= 0 {
-			offset = o
+		if offsetNum, err := strconv.Atoi(offsetStr); err == nil && offsetNum >= 0 {
+			offset = offsetNum
 		}
 	}
 
 	posts, err := h.postService.ListPosts(category, limit, offset)
 	if err != nil {
-		json.NewEncoder(w).Encode(domain.PostsResponse{Success: false, Message: err.Error()})
+		h.logger.Error("Failed to list posts", "error", err)
+		json.NewEncoder(w).Encode(domain.PostsResponse{
+			Success: false,
+			Message: err.Error(),
+		})
 		return
 	}
 
-	json.NewEncoder(w).Encode(domain.PostsResponse{Success: true, Posts: posts})
+	json.NewEncoder(w).Encode(domain.PostsResponse{
+		Success: true,
+		Message: "Posts retrieved successfully",
+		Posts:   posts,
+	})
 }
 
-// GetPost handles getting a single post
-func (h *PostHandler) GetPost(w http.ResponseWriter, r *http.Request) {
+func (h *PostHandler) GetPostByID(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	vars := mux.Vars(r)
-	postID, err := strconv.Atoi(vars["id"])
-	if err != nil {
-		json.NewEncoder(w).Encode(domain.PostDetailResponse{Success: false, Message: "Invalid post ID"})
+	idStr := path.Base(r.URL.Path)
+	postID, err := strconv.Atoi(idStr)
+
+	// WITH GORILLA PKG IMPLEMENTATION
+	// vars := mux.Vars(r)
+	// postID, err := strconv.Atoi(vars["id"])
+
+	if err != nil || postID <= 0 {
+		json.NewEncoder(w).Encode(domain.PostDetailResponse{
+			Success: false,
+			Message: "Invalid post ID",
+		})
 		return
 	}
 
-	post, comments, err := h.postService.GetPost(postID)
+	post, comments, err := h.postService.GetPostByID(postID)
 	if err != nil {
-		json.NewEncoder(w).Encode(domain.PostDetailResponse{Success: false, Message: err.Error()})
+		h.logger.Error("Failed to get post by ID", "error", err, "postID", postID)
+		json.NewEncoder(w).Encode(domain.PostDetailResponse{
+			Success: false,
+			Message: err.Error(),
+		})
 		return
 	}
 
 	json.NewEncoder(w).Encode(domain.PostDetailResponse{
 		Success:  true,
+		Message:  "Post retrieved successfully",
 		Post:     post,
 		Comments: comments,
 	})
 }
 
-// CreatePost handles creating a new post
 func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	// Get user from session
 	token := r.Header.Get("Authorization")
+	if token == "" {
+		json.NewEncoder(w).Encode(domain.PostDetailResponse{
+			Success: false,
+			Message: "Missing authorization token",
+		})
+		return
+	}
+
 	user, err := h.authService.ValidateSession(token)
 	if err != nil {
-		json.NewEncoder(w).Encode(domain.PostResponse{Success: false, Message: "Unauthorized"})
+		json.NewEncoder(w).Encode(domain.PostDetailResponse{
+			Success: false,
+			Message: "Unauthorized",
+		})
 		return
 	}
 
-	var req domain.CreatePostRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		json.NewEncoder(w).Encode(domain.PostResponse{Success: false, Message: "Invalid JSON"})
+	var postData domain.CreatePostRequest
+	if err := json.NewDecoder(r.Body).Decode(&postData); err != nil {
+		json.NewEncoder(w).Encode(domain.PostDetailResponse{
+			Success: false,
+			Message: "Invalid request payload",
+		})
 		return
 	}
 
-	post, err := h.postService.CreatePost(user.ID, req)
+	post, err := h.postService.CreatePost(user.ID, postData)
 	if err != nil {
-		json.NewEncoder(w).Encode(domain.PostResponse{Success: false, Message: err.Error()})
+		h.logger.Error("Failed to create post", "error", err, "userID", user.ID)
+		json.NewEncoder(w).Encode(domain.PostDetailResponse{
+			Success: false,
+			Message: err.Error(),
+		})
 		return
 	}
 
-	json.NewEncoder(w).Encode(domain.PostResponse{
+	json.NewEncoder(w).Encode(domain.PostDetailResponse{
 		Success: true,
 		Message: "Post created successfully",
 		Post:    post,
 	})
 }
-

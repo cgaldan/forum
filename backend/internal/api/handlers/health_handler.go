@@ -5,20 +5,17 @@ import (
 	"net/http"
 	"time"
 
-	"forum-backend/internal/domain"
+	"real-time-forum/internal/domain"
 )
 
-// HealthHandler handles health check endpoints
 type HealthHandler struct {
 	version string
 }
 
-// NewHealthHandler creates a new health handler
 func NewHealthHandler(version string) *HealthHandler {
 	return &HealthHandler{version: version}
 }
 
-// Health handles health check
 func (h *HealthHandler) Health(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -30,4 +27,3 @@ func (h *HealthHandler) Health(w http.ResponseWriter, r *http.Request) {
 
 	json.NewEncoder(w).Encode(response)
 }
-

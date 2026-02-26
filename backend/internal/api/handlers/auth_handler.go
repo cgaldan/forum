@@ -3,63 +3,70 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
-
-	"forum-backend/internal/domain"
-	"forum-backend/internal/service"
-	"forum-backend/pkg/logger"
+	"real-time-forum/internal/domain"
+	"real-time-forum/internal/service"
+	"real-time-forum/packages/logger"
 )
 
-// AuthHandler handles authentication endpoints
 type AuthHandler struct {
-	authService *service.AuthService
+	authService service.AuthServiceInterface
 	logger      *logger.Logger
 }
 
-// NewAuthHandler creates a new auth handler
-func NewAuthHandler(authService *service.AuthService, logger *logger.Logger) *AuthHandler {
+func NewAuthHandler(authService service.AuthServiceInterface, logger *logger.Logger) *AuthHandler {
 	return &AuthHandler{
 		authService: authService,
 		logger:      logger,
 	}
 }
 
-// Register handles user registration
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	var req domain.RegisterRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		json.NewEncoder(w).Encode(domain.AuthResponse{Success: false, Message: "Invalid JSON"})
+	var registerRequest domain.RegisterRequest
+	if err := json.NewDecoder(r.Body).Decode(&registerRequest); err != nil {
+		json.NewEncoder(w).Encode(domain.AuthResponse{
+			Success: false,
+			Message: "Invalid request payload",
+		})
 		return
 	}
 
-	user, token, err := h.authService.Register(req)
+	user, token, err := h.authService.Register(registerRequest)
 	if err != nil {
-		json.NewEncoder(w).Encode(domain.AuthResponse{Success: false, Message: err.Error()})
+		json.NewEncoder(w).Encode(domain.AuthResponse{
+			Success: false,
+			Message: err.Error(),
+		})
 		return
 	}
 
 	json.NewEncoder(w).Encode(domain.AuthResponse{
 		Success: true,
-		Message: "User registered successfully",
+		Message: "Registration successful",
 		User:    user,
 		Token:   token,
 	})
 }
 
-// Login handles user login
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	var req domain.LoginRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		json.NewEncoder(w).Encode(domain.AuthResponse{Success: false, Message: "Invalid JSON"})
+	var loginRequest domain.LoginRequest
+	if err := json.NewDecoder(r.Body).Decode(&loginRequest); err != nil {
+		json.NewEncoder(w).Encode(domain.AuthResponse{
+			Success: false,
+			Message: "Invalid request payload",
+		})
 		return
 	}
 
-	user, token, err := h.authService.Login(req)
+	user, token, err := h.authService.Login(loginRequest)
 	if err != nil {
-		json.NewEncoder(w).Encode(domain.AuthResponse{Success: false, Message: err.Error()})
+		json.NewEncoder(w).Encode(domain.AuthResponse{
+			Success: false,
+			Message: err.Error(),
+		})
 		return
 	}
 
@@ -71,40 +78,56 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// Logout handles user logout
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	token := r.Header.Get("Authorization")
 	if token == "" {
-		json.NewEncoder(w).Encode(domain.AuthResponse{Success: false, Message: "No token provided"})
+		json.NewEncoder(w).Encode(domain.AuthResponse{
+			Success: false,
+			Message: "Missing authorization token",
+		})
 		return
 	}
 
 	if err := h.authService.Logout(token); err != nil {
-		json.NewEncoder(w).Encode(domain.AuthResponse{Success: false, Message: err.Error()})
+		json.NewEncoder(w).Encode(domain.AuthResponse{
+			Success: false,
+			Message: err.Error(),
+		})
 		return
 	}
 
-	json.NewEncoder(w).Encode(domain.AuthResponse{Success: true, Message: "Logout successful"})
+	json.NewEncoder(w).Encode(domain.AuthResponse{
+		Success: true,
+		Message: "Logout successful",
+	})
 }
 
-// Me handles getting current user info
-func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
+func (h *AuthHandler) GetCurrentUser(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	token := r.Header.Get("Authorization")
 	if token == "" {
-		json.NewEncoder(w).Encode(domain.AuthResponse{Success: false, Message: "No token provided"})
+		json.NewEncoder(w).Encode(domain.AuthResponse{
+			Success: false,
+			Message: "Missing authorization token",
+		})
 		return
 	}
 
 	user, err := h.authService.ValidateSession(token)
 	if err != nil {
-		json.NewEncoder(w).Encode(domain.AuthResponse{Success: false, Message: err.Error()})
+		json.NewEncoder(w).Encode(domain.AuthResponse{
+			Success: false,
+			Message: err.Error(),
+		})
 		return
 	}
 
-	json.NewEncoder(w).Encode(domain.AuthResponse{Success: true, User: user})
+	json.NewEncoder(w).Encode(domain.AuthResponse{
+		Success: true,
+		Message: "User retrieved successfully",
+		User:    user,
+	})
 }
-
