@@ -65,8 +65,7 @@ type PostDetail struct {
 }
 
 type UserStatus struct {
-	UserID   int       `json:"user_id"`
-	Nickname string    `json:"nickname"`
-	Online   bool      `json:"online"`
-	LastSeen time.Time `json:"last_seen"`
+	UserID   int    `json:"user_id"`
+	Nickname string `json:"nickname"`
+	Online   bool   `json:"online"`
 }

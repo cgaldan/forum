@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"real-time-forum/internal/domain"
 	"real-time-forum/internal/repository"
+	"real-time-forum/internal/websocket"
 	"real-time-forum/packages/logger"
 	"time"
 )
@@ -11,13 +12,15 @@ import (
 type MessageService struct {
 	messageRepo repository.MessageRepositoryInterface
 	userRepo    repository.UserRepositoryInterface
+	hub         *websocket.Hub
 	logger      *logger.Logger
 }
 
-func NewMessageService(messageRepo repository.MessageRepositoryInterface, userRepo repository.UserRepositoryInterface, logger *logger.Logger) *MessageService {
+func NewMessageService(messageRepo repository.MessageRepositoryInterface, userRepo repository.UserRepositoryInterface, hub *websocket.Hub, logger *logger.Logger) *MessageService {
 	return &MessageService{
 		messageRepo: messageRepo,
 		userRepo:    userRepo,
+		hub:         hub,
 		logger:      logger,
 	}
 }
@@ -58,6 +61,8 @@ func (s *MessageService) SendMessage(senderID, receiverID int, content string) (
 		SenderName: sender.Nickname,
 	}
 
+	s.hub.BroadcastMessage(message, receiverID)
+
 	s.logger.Info("Message sent successfully", "messageID", messageID, "senderID", senderID, "receiverID", receiverID)
 	return message, nil
 }
@@ -90,7 +95,7 @@ func (s *MessageService) GetConversationsByUserID(userID int) ([]domain.Conversa
 		return nil, fmt.Errorf("failed to get conversations")
 	}
 
-	var converstations []domain.Conversation
+	var conversations []domain.Conversation
 	for _, partnerID := range partners {
 		user, err := s.userRepo.GetUserByID(partnerID)
 		if err != nil {
@@ -110,7 +115,7 @@ func (s *MessageService) GetConversationsByUserID(userID int) ([]domain.Conversa
 			continue
 		}
 
-		converstations = append(converstations, domain.Conversation{
+		conversations = append(conversations, domain.Conversation{
 			UserID:      partnerID,
 			Nickname:    user.Nickname,
 			LastMessage: lastMessage.Content,
@@ -119,7 +124,7 @@ func (s *MessageService) GetConversationsByUserID(userID int) ([]domain.Conversa
 		})
 	}
 
-	return converstations, nil
+	return conversations, nil
 }
 
 func (s *MessageService) validateMessage(content string) error {

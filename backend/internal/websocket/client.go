@@ -2,57 +2,55 @@ package websocket
 
 import (
 	"encoding/json"
+	"real-time-forum/packages/logger"
 	"time"
-
-	"forum-backend/pkg/logger"
 
 	"github.com/gorilla/websocket"
 )
 
 const (
-	// Time allowed to write a message to the peer
-	writeWait = 10 * time.Second
-
-	// Time allowed to read the next pong message from the peer
-	pongWait = 60 * time.Second
-
-	// Send pings to peer with this period (must be less than pongWait)
-	pingPeriod = 54 * time.Second
-
-	// Maximum message size allowed from peer
+	writeWait      = 10 * time.Second
+	pongWait       = 60 * time.Second
+	pingPeriod     = (pongWait * 9) / 10
 	maxMessageSize = 512
 )
 
-// Client represents a WebSocket client connection
 type Client struct {
-	Hub    *Hub
-	Conn   *websocket.Conn
-	Send   chan []byte
-	UserID int
-	Logger *logger.Logger
+	Hub        *Hub
+	Connection *websocket.Conn
+	Send       chan []byte
+	UserID     int
+	Logger     *logger.Logger
 }
 
-// WSMessage represents a WebSocket message
-type WSMessage struct {
-	Type    string      `json:"type"`
-	Payload interface{} `json:"payload"`
+type WsMessage struct {
+	Type    string `json:"type"`
+	Payload any    `json:"payload"`
 }
 
-// ReadPump pumps messages from the websocket connection to the hub
+func NewClient(hub *Hub, connection *websocket.Conn, userID int, logger *logger.Logger) *Client {
+	return &Client{
+		Hub:        hub,
+		Connection: connection,
+		Send:       make(chan []byte, 256),
+		UserID:     userID,
+		Logger:     logger,
+	}
+}
+
 func (c *Client) ReadPump() {
 	defer func() {
-		c.Hub.Unregister(c)
-		c.Conn.Close()
+		c.Hub.unregister <- c
+		c.Connection.Close()
 	}()
-
-	c.Conn.SetReadDeadline(time.Now().Add(pongWait))
-	c.Conn.SetPongHandler(func(string) error {
-		c.Conn.SetReadDeadline(time.Now().Add(pongWait))
+	c.Connection.SetReadDeadline(time.Now().Add(pongWait))
+	c.Connection.SetPongHandler(func(string) error {
+		c.Connection.SetReadDeadline(time.Now().Add(pongWait))
 		return nil
 	})
 
 	for {
-		_, message, err := c.Conn.ReadMessage()
+		_, message, err := c.Connection.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				c.Logger.Error("WebSocket read error", "error", err, "userID", c.UserID)
@@ -60,67 +58,61 @@ func (c *Client) ReadPump() {
 			break
 		}
 
-		// Handle incoming messages
-		var wsMsg WSMessage
-		if err := json.Unmarshal(message, &wsMsg); err != nil {
-			c.Logger.Warn("Failed to unmarshal WebSocket message", "error", err)
+		var wsMessage WsMessage
+		if err := json.Unmarshal(message, &wsMessage); err != nil {
+			c.Logger.Warn("Failed to unmarshal message", "error", err)
 			continue
 		}
 
-		// Handle different message types
-		switch wsMsg.Type {
+		switch wsMessage.Type {
 		case "ping":
-			// Respond with pong
-			pong := WSMessage{Type: "pong"}
+			pong := WsMessage{
+				Type: "pong",
+			}
 			data, _ := json.Marshal(pong)
 			c.Send <- data
 		default:
-			c.Logger.Debug("Received unknown message type", "type", wsMsg.Type)
+			c.Logger.Debug("Unknown message type", "type", wsMessage.Type)
 		}
 	}
 }
 
-// WritePump pumps messages from the hub to the websocket connection
 func (c *Client) WritePump() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
-		c.Conn.Close()
+		c.Connection.Close()
 	}()
 
 	for {
 		select {
 		case message, ok := <-c.Send:
-			c.Conn.SetWriteDeadline(time.Now().Add(writeWait))
+			c.Connection.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
-				// Hub closed the channel
-				c.Conn.WriteMessage(websocket.CloseMessage, []byte{})
+				c.Connection.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
 
-			w, err := c.Conn.NextWriter(websocket.TextMessage)
+			writer, err := c.Connection.NextWriter(websocket.TextMessage)
 			if err != nil {
 				return
 			}
-			w.Write(message)
+			writer.Write(message)
 
-			// Add queued messages to current websocket message
-			n := len(c.Send)
-			for i := 0; i < n; i++ {
-				w.Write([]byte{'\n'})
-				w.Write(<-c.Send)
+			queueSize := len(c.Send)
+			for i := 0; i < queueSize; i++ {
+				writer.Write(<-c.Send)
 			}
 
-			if err := w.Close(); err != nil {
+			if err := writer.Close(); err != nil {
 				return
 			}
 
 		case <-ticker.C:
-			c.Conn.SetWriteDeadline(time.Now().Add(writeWait))
-			if err := c.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+			c.Connection.SetWriteDeadline(time.Now().Add(writeWait))
+			if err := c.Connection.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
 			}
 		}
 	}
 }
-

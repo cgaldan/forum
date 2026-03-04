@@ -3,6 +3,7 @@ package service
 import (
 	"real-time-forum/internal/domain"
 	"real-time-forum/internal/repository"
+	"real-time-forum/internal/websocket"
 	"real-time-forum/packages/logger"
 )
 
@@ -13,12 +14,12 @@ type Services struct {
 	Message MessageServiceInterface
 }
 
-func NewServices(repos *repository.Repositories, logger *logger.Logger) *Services {
+func NewServices(repos *repository.Repositories, hub *websocket.Hub, logger *logger.Logger) *Services {
 	return &Services{
 		Auth:    NewAuthService(repos.User, repos.Session, logger),
 		Post:    NewPostService(repos.Post, repos.Comment, logger),
 		Comment: NewCommentService(repos.Comment, repos.Post, logger),
-		Message: NewMessageService(repos.Message, repos.User, logger),
+		Message: NewMessageService(repos.Message, repos.User, hub, logger),
 	}
 }
 

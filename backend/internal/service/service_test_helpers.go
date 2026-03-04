@@ -4,6 +4,7 @@ import (
 	"io"
 	"real-time-forum/internal/database"
 	"real-time-forum/internal/repository"
+	"real-time-forum/internal/websocket"
 	"real-time-forum/packages/logger"
 	"testing"
 
@@ -30,7 +31,9 @@ func SetupTestServices(t *testing.T) *Services {
 
 	testLogger := logger.NewLogger(io.Discard, logger.InfoLevel)
 
-	services := NewServices(repos, testLogger)
+	hub := websocket.NewHub(testLogger, repos.User)
+
+	services := NewServices(repos, hub, testLogger)
 
 	return services
 }
