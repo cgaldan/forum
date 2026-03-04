@@ -14,7 +14,7 @@ func NewCommentRepository(db *sql.DB) *CommentRepository {
 	return &CommentRepository{db: db}
 }
 
-func (r *CommentRepository) CreateComment(postID, userID int, content string) (int64, error) {
+func (r *CommentRepository) CreateComment(userID, postID int, content string) (int64, error) {
 	result, err := r.db.Exec(`
 		INSERT INTO comments (post_id, user_id, content)
 		VALUES (?, ?, ?)`, postID, userID, content)

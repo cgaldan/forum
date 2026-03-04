@@ -40,7 +40,7 @@ type PostRepositoryInterface interface {
 }
 
 type CommentRepositoryInterface interface {
-	CreateComment(postID, userID int, content string) (int64, error)
+	CreateComment(userID, postID int, content string) (int64, error)
 	GetCommentsByPostID(postID int) ([]domain.Comment, error)
 	GetCommentByID(commentID int) (*domain.Comment, error)
 	GetCommentsByUserID(userID int, limit, offset int) ([]domain.Comment, error)

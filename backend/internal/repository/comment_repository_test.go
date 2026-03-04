@@ -13,7 +13,7 @@ func TestCommentRepository_CreateComment(t *testing.T) {
 	userID, _ := userRepo.CreateUser("testuser", "test@example.com", "hashedpass", "John", "Doe", 25, "male")
 	postID, _ := postRepo.CreatePost(int(userID), "Test Post", "This is a test post content.", "General")
 
-	commentID, err := commentRepo.CreateComment(int(postID), int(userID), "This is a test comment.")
+	commentID, err := commentRepo.CreateComment(int(userID), int(postID), "This is a test comment.")
 	if err != nil {
 		t.Fatalf("Failed to create comment: %v", err)
 	}
@@ -77,14 +77,16 @@ func TestCommentRepository_GetCommentsByUserID(t *testing.T) {
 	userID, _ := userRepo.CreateUser("testuser", "test@example.com", "hashedpass", "John", "Doe", 25, "male")
 	postID, _ := postRepo.CreatePost(int(userID), "Test Post", "This is a test post content.", "General")
 
-	commentRepo.CreateComment(int(postID), int(userID), "This is a test comment.")
+	for i := 0; i < 5; i++ {
+		commentRepo.CreateComment(int(postID), int(userID), "comment")
+	}
 
-	comments, err := commentRepo.GetCommentsByUserID(int(userID), 10, 0)
+	comments, err := commentRepo.GetCommentsByUserID(int(userID), 2, 1)
 	if err != nil {
 		t.Fatalf("Failed to get comments by user ID: %v", err)
 	}
 
-	if len(comments) == 0 {
-		t.Error("Expected at least one comment for user")
+	if len(comments) != 2 {
+		t.Errorf("Expected 2 comments with limit/offset, got %d", len(comments))
 	}
 }
