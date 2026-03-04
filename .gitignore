@@ -53,3 +53,5 @@ dist/
 
 # Build artifacts
 build/
+
+*.http
