@@ -23,7 +23,10 @@ func TestUserRepository_GetUserByID(t *testing.T) {
 	repos := SetupTestDB(t)
 	repo := repos.User
 
-	userID, _ := repo.CreateUser("testuser", "test@example.com", "hashedpass", "John", "Doe", 25, "male")
+	userID, err := repo.CreateUser("testuser", "test@example.com", "hashedpass", "John", "Doe", 25, "male")
+	if err != nil {
+		t.Fatalf("Failed to create user: %v", err)
+	}
 
 	user, err := repo.GetUserByID(int(userID))
 	if err != nil {
@@ -42,7 +45,10 @@ func TestUserRepository_GetUserByIdentifier(t *testing.T) {
 	repos := SetupTestDB(t)
 	repo := repos.User
 
-	userID, _ := repo.CreateUser("testuser", "test@example.com", "hashedpass", "John", "Doe", 25, "male")
+	userID, err := repo.CreateUser("testuser", "test@example.com", "hashedpass", "John", "Doe", 25, "male")
+	if err != nil {
+		t.Fatalf("Failed to create user: %v", err)
+	}
 
 	user, pass, err := repo.GetUserByIdentifier("testuser")
 	if err != nil {
@@ -61,11 +67,14 @@ func TestUserRepository_UpdateLastSeen(t *testing.T) {
 	repos := SetupTestDB(t)
 	repo := repos.User
 
-	userID, _ := repo.CreateUser("testuser", "test@example.com", "hashedpass", "John", "Doe", 25, "male")
+	userID, err := repo.CreateUser("testuser", "test@example.com", "hashedpass", "John", "Doe", 25, "male")
+	if err != nil {
+		t.Fatalf("Failed to create user: %v", err)
+	}
 
 	time.Sleep(100 * time.Millisecond)
 
-	err := repo.UpdateLastSeen(int(userID))
+	err = repo.UpdateLastSeen(int(userID))
 	if err != nil {
 		t.Fatalf("Failed to update last seen: %v", err)
 	}

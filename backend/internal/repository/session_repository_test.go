@@ -27,6 +27,9 @@ func TestSessionRepository_GetSessionBySessionID(t *testing.T) {
 	userID, _ := userRepo.CreateUser("testuser", "test@example.com", "hashedpass", "John", "Doe", 25, "male")
 
 	err := sessionRepo.CreateSession(sessionID, int(userID), time.Now().Add(24*time.Hour))
+	if err != nil {
+		t.Fatalf("failed to create session: %v", err)
+	}
 
 	session, err := sessionRepo.GetSessionBySessionID(sessionID)
 	if err != nil {
@@ -50,6 +53,9 @@ func TestSessionRepository_DeleteSession(t *testing.T) {
 	userID, _ := userRepo.CreateUser("testuser", "test@example.com", "hashedpass", "John", "Doe", 25, "male")
 
 	err := sessionRepo.CreateSession(sessionID, int(userID), time.Now().Add(24*time.Hour))
+	if err != nil {
+		t.Fatalf("Failed to create session: %v", err)
+	}
 
 	err = sessionRepo.DeleteSession(sessionID)
 	if err != nil {
