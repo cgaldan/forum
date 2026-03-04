@@ -7,7 +7,6 @@ import (
 	"real-time-forum/internal/service"
 	"real-time-forum/packages/logger"
 	"strconv"
-	"strings"
 )
 
 type CommentHandler struct {
@@ -45,16 +44,8 @@ func (h *CommentHandler) CreateComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	segments := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
-	if len(segments) < 2 {
-		json.NewEncoder(w).Encode(domain.CommentResponse{
-			Success: false,
-			Message: "Invalid URL",
-		})
-		return
-	}
-
-	postID, err := strconv.Atoi(segments[len(segments)-2])
+	idStr := r.PathValue("id")
+	postID, err := strconv.Atoi(idStr)
 
 	// WITH GORILLA PKG IMPLEMANTATION
 	// vars := mux.Vars(r)

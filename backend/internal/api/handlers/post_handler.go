@@ -3,7 +3,6 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
-	"path"
 	"real-time-forum/internal/domain"
 	"real-time-forum/internal/service"
 	"real-time-forum/packages/logger"
@@ -65,7 +64,7 @@ func (h *PostHandler) GetPosts(w http.ResponseWriter, r *http.Request) {
 func (h *PostHandler) GetPostByID(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	idStr := path.Base(r.URL.Path)
+	idStr := r.PathValue("id")
 	postID, err := strconv.Atoi(idStr)
 
 	// WITH GORILLA PKG IMPLEMENTATION

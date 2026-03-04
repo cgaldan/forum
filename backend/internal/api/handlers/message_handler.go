@@ -3,7 +3,6 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
-	"path"
 	"real-time-forum/internal/domain"
 	"real-time-forum/internal/service"
 	"real-time-forum/packages/logger"
@@ -37,7 +36,7 @@ func (h *MessageHandler) SendMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	idStr := path.Base(r.URL.Path)
+	idStr := r.PathValue("id")
 	receiverID, err := strconv.Atoi(idStr)
 
 	// WITH GORILLA PKG IMPLEMENTATION
@@ -90,7 +89,7 @@ func (h *MessageHandler) GetMessages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	idStr := path.Base(r.URL.Path)
+	idStr := r.PathValue("id")
 	receiverID, err := strconv.Atoi(idStr)
 
 	// WITH GORILLA PKG IMPLEMENTATION
