@@ -15,7 +15,7 @@ type RateLimiter struct {
 }
 
 func NewRateLimiter(limit int, window time.Duration) *RateLimiter {
-	RateLimiter := &RateLimiter{
+	limiter := &RateLimiter{
 		requests: make(map[string][]time.Time),
 		limit:    limit,
 		window:   window,
@@ -24,11 +24,11 @@ func NewRateLimiter(limit int, window time.Duration) *RateLimiter {
 	go func() {
 		ticker := time.NewTicker(time.Minute)
 		for range ticker.C {
-			RateLimiter.cleanup()
+			limiter.cleanup()
 		}
 	}()
 
-	return RateLimiter
+	return limiter
 }
 
 func (rl *RateLimiter) cleanup() {
