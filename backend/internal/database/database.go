@@ -21,7 +21,8 @@ func NewDatabase(dbPath string) (*sql.DB, error) {
 	}
 
 	if err := db.Ping(); err != nil {
-		return nil, fmt.Errorf("failed to connect to database: %w", err)
+		db.Close()
+		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
 	db.SetMaxOpenConns(25)
