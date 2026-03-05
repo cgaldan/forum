@@ -26,14 +26,34 @@ func (hub *Hub) BroadcastMessage(message *domain.Message, receiverID int) {
 	}
 
 	hub.mu.RLock()
+	clientsToSend := []*Client{}
 	if client, ok := hub.clients[receiverID]; ok {
-		client.Send <- data
+		clientsToSend = append(clientsToSend, client)
 	}
-
 	if client, ok := hub.clients[message.SenderID]; ok {
-		client.Send <- data
+		clientsToSend = append(clientsToSend, client)
 	}
 	hub.mu.RUnlock()
+
+	var toRemove []int
+	for _, client := range clientsToSend {
+		select {
+		case client.Send <- data:
+		default:
+			toRemove = append(toRemove, client.UserID)
+		}
+	}
+
+	if len(toRemove) > 0 {
+		hub.mu.Lock()
+		for _, id := range toRemove {
+			if client, ok := hub.clients[id]; ok {
+				close(client.Send)
+				delete(hub.clients, id)
+			}
+		}
+		hub.mu.Unlock()
+	}
 }
 
 func (hub *Hub) broadcastUserStatus(userID int, online bool) {
@@ -60,27 +80,55 @@ func (hub *Hub) broadcastUserStatus(userID int, online bool) {
 		return
 	}
 
-	for id, client := range hub.clients {
-		if id != userID {
-			client.Send <- data
+	hub.mu.RLock()
+	clients := make([]*Client, 0, len(hub.clients))
+	for _, client := range hub.clients {
+		clients = append(clients, client)
+	}
+	hub.mu.RUnlock()
+
+	var toRemove []int
+	for _, client := range clients {
+		select {
+		case client.Send <- data:
+		default:
+			toRemove = append(toRemove, client.UserID)
 		}
+	}
+
+	if len(toRemove) > 0 {
+		hub.mu.Lock()
+		for _, id := range toRemove {
+			if client, ok := hub.clients[id]; ok {
+				close(client.Send)
+				delete(hub.clients, id)
+			}
+		}
+		hub.mu.Unlock()
 	}
 }
 
-func (hub *Hub) sendOnlineUsers(client *Client) {
-	hub.mu.Lock()
-	defer hub.mu.Unlock()
+func (hub *Hub) sendOnlineUsers(_ *Client) {
+	hub.mu.RLock()
+	userIDs := make([]int, 0, len(hub.clients))
+	clientsSnapshot := make(map[int]*Client, len(hub.clients))
+	for userID, c := range hub.clients {
+		userIDs = append(userIDs, userID)
+		clientsSnapshot[userID] = c
+	}
+	hub.mu.RUnlock()
 
 	var users []domain.UserStatus
-	for userID := range hub.clients {
+	for _, userID := range userIDs {
 		user, err := hub.userRepo.GetUserByID(userID)
-		if err == nil {
-			users = append(users, domain.UserStatus{
-				UserID:   userID,
-				Nickname: user.Nickname,
-				Online:   true,
-			})
+		if err != nil {
+			continue
 		}
+		users = append(users, domain.UserStatus{
+			UserID:   userID,
+			Nickname: user.Nickname,
+			Online:   true,
+		})
 	}
 
 	message := WsMessage{
@@ -94,5 +142,28 @@ func (hub *Hub) sendOnlineUsers(client *Client) {
 		return
 	}
 
-	client.Send <- data
+	clientsToSend := make([]*Client, 0, len(clientsSnapshot))
+	for _, c := range clientsSnapshot {
+		clientsToSend = append(clientsToSend, c)
+	}
+
+	var toRemove []int
+	for _, client := range clientsToSend {
+		select {
+		case client.Send <- data:
+		default:
+			toRemove = append(toRemove, client.UserID)
+		}
+	}
+
+	if len(toRemove) > 0 {
+		hub.mu.Lock()
+		for _, id := range toRemove {
+			if client, ok := hub.clients[id]; ok {
+				close(client.Send)
+				delete(hub.clients, id)
+			}
+		}
+		hub.mu.Unlock()
+	}
 }

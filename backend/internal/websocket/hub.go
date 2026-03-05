@@ -72,13 +72,29 @@ func (h *Hub) unregisterClientCase(client *Client) {
 
 func (h *Hub) broadcastMessageCase(message []byte) {
 	h.mu.RLock()
+	clients := make([]*Client, 0, len(h.clients))
 	for _, client := range h.clients {
+		clients = append(clients, client)
+	}
+	h.mu.RUnlock()
+
+	var toRemove []int
+	for _, client := range clients {
 		select {
 		case client.Send <- message:
 		default:
-			close(client.Send)
-			h.unregister <- client
+			toRemove = append(toRemove, client.UserID)
 		}
 	}
-	h.mu.RUnlock()
+
+	if len(toRemove) > 0 {
+		h.mu.Lock()
+		for _, id := range toRemove {
+			if client, ok := h.clients[id]; ok {
+				close(client.Send)
+				delete(h.clients, id)
+			}
+		}
+		h.mu.Unlock()
+	}
 }

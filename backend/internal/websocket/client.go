@@ -99,11 +99,6 @@ func (c *Client) WritePump() {
 			}
 			writer.Write(message)
 
-			queueSize := len(c.Send)
-			for i := 0; i < queueSize; i++ {
-				writer.Write(<-c.Send)
-			}
-
 			if err := writer.Close(); err != nil {
 				return
 			}
