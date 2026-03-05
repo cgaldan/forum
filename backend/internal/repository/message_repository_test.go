@@ -49,8 +49,8 @@ func TestMessageRepository_GetConversation(t *testing.T) {
 	if len(conversation) != 2 {
 		t.Fatalf("expected 2 messages, got %d", len(conversation))
 	}
-	if conversation[0].Content != "first" || conversation[1].Content != "second" {
-		t.Errorf("expected chronological order, got %v", conversation)
+	if conversation[1].Content != "first" || conversation[0].Content != "second" {
+		t.Errorf("expected reversed chronological order, got %v", conversation)
 	}
 
 	conversation, _ = msgRepo.GetConversation(int(userID1), int(userID2), 1, 0)
