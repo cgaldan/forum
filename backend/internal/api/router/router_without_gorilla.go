@@ -20,7 +20,7 @@ func NewRouterNoGorilla(services *service.Services, config *config.Config, hub *
 	websocketHandler := handlers.NewWebSocketHandler(hub, services.Auth, logger)
 	healthHandler := handlers.NewHealthHandler("1.0.0")
 
-	middleware := ChainMiddleware(
+	chain := ChainMiddleware(
 		middleware.RecoveryMiddleware(logger),
 		middleware.LoggingMiddleware(logger),
 		middleware.SecurityHeadersMiddleware(),
@@ -29,27 +29,27 @@ func NewRouterNoGorilla(services *service.Services, config *config.Config, hub *
 	)
 
 	// Health check
-	mux.Handle("GET /health", middleware(healthHandler.Health))
+	mux.Handle("GET /health", chain(healthHandler.Health))
 
 	// Auth routes
-	mux.Handle("POST /api/auth/register", middleware(authHandler.Register))
-	mux.Handle("POST /api/auth/login", middleware(authHandler.Login))
-	mux.Handle("POST /api/auth/logout", middleware(authHandler.Logout))
-	mux.Handle("GET /api/auth/me", middleware(authHandler.GetCurrentUser))
+	mux.Handle("POST /api/auth/register", chain(authHandler.Register))
+	mux.Handle("POST /api/auth/login", chain(authHandler.Login))
+	mux.Handle("POST /api/auth/logout", chain(authHandler.Logout))
+	mux.Handle("GET /api/auth/me", chain(authHandler.GetCurrentUser))
 
 	// Post routes
-	mux.Handle("GET /api/posts", middleware(postHandler.GetPosts))
-	mux.Handle("POST /api/posts", middleware(postHandler.CreatePost))
-	mux.Handle("GET /api/posts/{id}", middleware(postHandler.GetPostByID))
-	mux.Handle("POST /api/posts/{id}/comments", middleware(commentHandler.CreateComment))
+	mux.Handle("GET /api/posts", chain(postHandler.GetPosts))
+	mux.Handle("POST /api/posts", chain(postHandler.CreatePost))
+	mux.Handle("GET /api/posts/{id}", chain(postHandler.GetPostByID))
+	mux.Handle("POST /api/posts/{id}/comments", chain(commentHandler.CreateComment))
 
 	// Message routes
-	mux.Handle("GET /api/messages/conversations", middleware(messageHandler.GetConversations))
-	mux.Handle("GET /api/messages/{id}", middleware(messageHandler.GetMessages))
-	mux.Handle("POST /api/messages/{id}", middleware(messageHandler.SendMessage))
+	mux.Handle("GET /api/messages/conversations", chain(messageHandler.GetConversations))
+	mux.Handle("GET /api/messages/{id}", chain(messageHandler.GetMessages))
+	mux.Handle("POST /api/messages/{id}", chain(messageHandler.SendMessage))
 
 	// WebSocket routes
-	mux.Handle("/ws", middleware(websocketHandler.HandleWebSocket))
+	mux.Handle("/ws", chain(websocketHandler.HandleWebSocket))
 
 	frontendPath := "../frontend"
 	if config.Environment == "production" {
@@ -60,11 +60,11 @@ func NewRouterNoGorilla(services *service.Services, config *config.Config, hub *
 	return mux
 }
 
-func ChainMiddleware(middleware ...Middleware) func(http.HandlerFunc) http.Handler {
+func ChainMiddleware(chain ...Middleware) func(http.HandlerFunc) http.Handler {
 	return func(h http.HandlerFunc) http.Handler {
 		var handler http.Handler = h
-		for i := len(middleware) - 1; i >= 0; i-- {
-			handler = middleware[i](handler)
+		for i := len(chain) - 1; i >= 0; i-- {
+			handler = chain[i](handler)
 		}
 		return handler
 	}

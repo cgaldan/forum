@@ -12,7 +12,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func NewRouter(services *service.Services, config *config.Config, logger *logger.Logger, hub *websocket.Hub) *mux.Router {
+func NewRouter(services *service.Services, config *config.Config, hub *websocket.Hub, logger *logger.Logger) *mux.Router {
 	r := mux.NewRouter()
 
 	authHandler := handlers.NewAuthHandler(services.Auth, logger)
