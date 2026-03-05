@@ -1,6 +1,9 @@
 package middleware
 
 import (
+	"bufio"
+	"errors"
+	"net"
 	"net/http"
 	"real-time-forum/packages/logger"
 	"time"
@@ -9,6 +12,18 @@ import (
 type responseWriter struct {
 	http.ResponseWriter
 	status int
+}
+
+func (rw *responseWriter) WriteHeader(status int) {
+	rw.status = status
+	rw.ResponseWriter.WriteHeader(status)
+}
+
+func (rw *responseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	if h, ok := rw.ResponseWriter.(http.Hijacker); ok {
+		return h.Hijack()
+	}
+	return nil, nil, errors.New("underlying ResponseWriter does not support Hijacker")
 }
 
 func LoggingMiddleware(logger *logger.Logger) func(http.Handler) http.Handler {
