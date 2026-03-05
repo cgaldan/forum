@@ -44,7 +44,7 @@ func NewRouter(services *service.Services, config *config.Config, logger *logger
 	api.HandleFunc("/messages/{id}", messageHandler.SendMessage).Methods("POST")
 
 	// Websocket routes
-	api.HandleFunc("/ws", websocketHandler.HandleWebSocket)
+	r.HandleFunc("/ws", websocketHandler.HandleWebSocket)
 
 	frontendPath := "../frontend"
 	if config.Environment == "production" {

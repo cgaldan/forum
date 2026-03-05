@@ -32,7 +32,7 @@ func NewWebSocketHandler(hub *websocket.Hub, authService service.AuthServiceInte
 }
 
 func (h *WebSocketHandler) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
-	token := r.Header.Get("Authorization")
+	token := r.URL.Query().Get("token")
 	if token == "" {
 		http.Error(w, "Missing authorization token", http.StatusUnauthorized)
 		return

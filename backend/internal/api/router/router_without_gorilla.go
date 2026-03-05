@@ -49,7 +49,7 @@ func NewRouterNoGorilla(services *service.Services, config *config.Config, hub *
 	mux.Handle("POST /api/messages/{id}", middleware(messageHandler.SendMessage))
 
 	// WebSocket routes
-	mux.Handle("/api/ws", middleware(websocketHandler.HandleWebSocket))
+	mux.Handle("/ws", middleware(websocketHandler.HandleWebSocket))
 
 	frontendPath := "../frontend"
 	if config.Environment == "production" {
