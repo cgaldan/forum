@@ -51,6 +51,12 @@ func NewRouterNoGorilla(services *service.Services, config *config.Config, hub *
 	// WebSocket routes
 	mux.Handle("/api/ws", middleware(websocketHandler.HandleWebSocket))
 
+	frontendPath := "../frontend"
+	if config.Environment == "production" {
+		frontendPath = "./frontend"
+	}
+	mux.Handle("/", http.FileServer(http.Dir(frontendPath)))
+
 	return mux
 }
 

@@ -35,3 +35,7 @@ type WebSocketConfig struct {
 	PongWait        time.Duration
 	WriteWait       time.Duration
 }
+
+type FrontendConfig struct {
+	Path string
+}

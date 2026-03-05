@@ -12,6 +12,7 @@ type Config struct {
 	RateLimit   RateLimitConfig
 	CORS        CORSConfig
 	Websocket   WebSocketConfig
+	Frontend    FrontendConfig
 }
 
 func LoadConfig() (*Config, error) {
@@ -44,6 +45,9 @@ func LoadConfig() (*Config, error) {
 			PingPeriod:      getEnvDuration("WS_PING_PERIOD", 54*time.Second),
 			PongWait:        getEnvDuration("WS_PONG_WAIT", 60*time.Second),
 			WriteWait:       getEnvDuration("WS_WRITE_WAIT", 10*time.Second),
+		},
+		Frontend: FrontendConfig{
+			Path: getEnv("FRONTEND_PATH", "./frontend"),
 		},
 	}
 

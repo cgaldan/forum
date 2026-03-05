@@ -1,6 +1,7 @@
 package router
 
 import (
+	"net/http"
 	"real-time-forum/internal/api/handlers"
 	"real-time-forum/internal/api/middleware"
 	"real-time-forum/internal/config"
@@ -44,6 +45,12 @@ func NewRouter(services *service.Services, config *config.Config, logger *logger
 
 	// Websocket routes
 	api.HandleFunc("/ws", websocketHandler.HandleWebSocket)
+
+	frontendPath := "../frontend"
+	if config.Environment == "production" {
+		frontendPath = config.Frontend.Path
+	}
+	r.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir(frontendPath))))
 
 	r.Use(middleware.RecoveryMiddleware(logger))
 	r.Use(middleware.LoggingMiddleware(logger))
