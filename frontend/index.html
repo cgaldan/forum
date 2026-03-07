@@ -124,7 +124,10 @@
                             <button id="close-chat" class="btn-icon">✕</button>
                         </div>
                         <div id="messages-container" class="messages-container">
-                            <div class="no-messages">Select a user to start chatting</div>
+                            <div id="load-trigger" style="height: 80px;"></div>
+                            <div id="messages-list" class="messages-list">
+                                <div class="no-messages">Select a user to start chatting</div>
+                            </div>
                         </div>
                         <form id="sendMessageForm" class="message-input-form">
                             <textarea id="message-input" placeholder="Type a message... (Press Enter to send, Shift+Enter for new line)" rows="3" required></textarea>
