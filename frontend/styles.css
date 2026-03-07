@@ -455,6 +455,18 @@ body {
     overflow-y: auto;
     flex-shrink: 0;
     border: 1px solid var(--border);
+    transition: width 0.3s ease;
+    overflow: hidden;
+}
+
+.messaging-sidebar.collapsed {
+    width: 80px;
+}
+
+.messaging-sidebar.collapsed h3,
+.messaging-sidebar.collapsed h4 {
+    opacity: 0;
+    pointer-events: none;
 }
 
 .messaging-sidebar::-webkit-scrollbar {
