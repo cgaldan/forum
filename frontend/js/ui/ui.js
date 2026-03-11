@@ -89,9 +89,5 @@ export function switchAuthTab(tab) {
 
 export function sidebar() {
     const sidebar = document.querySelector(".messaging-sidebar");
-    const toggleBtn = getElement("toggle-sidebar");
-
-    toggleBtn.addEventListener("click", () => {
     sidebar.classList.toggle("collapsed");
-    });
 }

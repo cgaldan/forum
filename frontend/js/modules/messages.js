@@ -1,6 +1,6 @@
 import api from '../api/client.js';
 import store from '../state/store.js';
-import { escapeHtml, formatDate, getElement, throttle } from '../utils/helpers.js';
+import { escapeHtml, formatDate, getElement, noMoreMessages } from '../utils/helpers.js';
 import { CONFIG } from '../config.js';
 
 export async function loadConversations() {
@@ -44,6 +44,9 @@ export async function openChat(userId, nickname) {
         hasMoreMessages: true
     });
 
+    const list = getElement('messages-list');
+    if (list) list.innerHTML = '';
+
     getElement('chat-user-name').textContent = nickname;
     getElement('message-panel').classList.remove('hidden');
 
@@ -59,13 +62,15 @@ export async function loadMessages(userId, isInitial = false) {
     if (store.get('isLoadingMessages')) {
         return;
     }
-    
+
     const state = store.getState();
     if (!state.hasMoreMessages && !isInitial) {
         return;
     }
 
     store.set('isLoadingMessages', true);
+    const loadingIndicator = getElement('loading-more');
+    if (loadingIndicator) loadingIndicator.style.display = 'block';
 
     const container = getElement('messages-container');
 
@@ -74,7 +79,8 @@ export async function loadMessages(userId, isInitial = false) {
 
     try {
         const data = await api.getMessages(userId, CONFIG.MESSAGE_LOAD_LIMIT, state.messageOffset);
-
+        if (store.get('currentChatUser')?.id !== userId) return;
+    
         if (data.success) {
             const newMessages = data.messages || [];
 
@@ -91,11 +97,19 @@ export async function loadMessages(userId, isInitial = false) {
                     messageOffset: state.messageOffset + newMessages.length
                 });
 
-                renderMessages();//
+                if (isInitial) {
+                    renderMessages();
+                } else {
+                    prependMessages(newMessages);
+                }
             }
         }
     } catch (error) {
         console.error('Load messages error:', error);
+    } finally {
+        store.set('isLoadingMessages', false);
+        const loadingIndicator = getElement('loading-more');
+        if (loadingIndicator) loadingIndicator.style.display = 'none';
     }
 
     if (didLoadNewMessages) {
@@ -105,8 +119,6 @@ export async function loadMessages(userId, isInitial = false) {
             } else {
                 container.scrollTop += container.scrollHeight - previousScrollHeight;
             }
-
-            store.set('isLoadingMessages', false);
         });
     }
 }
@@ -133,30 +145,19 @@ function setupMessageObserver() {
     observer.observe(trigger);
 }
 
-function handleMessageScroll() {
-    requestAnimationFrame (() => {
-        const container = getElement('messages-container');
-        const state = store.getState();
-
-        if (container.scrollTop <= CONFIG.MESSAGE_SCROLL_THRESHOLD && 
-            state.hasMoreMessages && 
-            !state.isLoadingMessages &&
-            state.currentChatUser) {
-            loadMessages(state.currentChatUser.id, false);
-        }
-    });
-}
-
-const throttledHandleMessageScroll = throttle(handleMessageScroll, 200);
-
 function renderMessages() {
     const list = getElement('messages-list');
+    const state = store.getState();
     const messages = store.get('messages');
     const currentUser = store.get('currentUser');
-    const isLoadingMessages = store.get('isLoadingMessages');
     const hasMoreMessages = store.get('hasMoreMessages');
-    const messageOffset = store.get('messageOffset');
-    
+    const loadingIndicator = getElement('loading-more');
+
+    if (!loadingIndicator){
+        console.log('Loading indicator not found'); 
+        return;
+    }
+
     if (messages.length === 0) {
         list.innerHTML = '<div class="no-messages">No messages yet. Start the conversation!</div>';
         return;
@@ -164,13 +165,7 @@ function renderMessages() {
 
     let html = '';
 
-    if (isLoadingMessages && messageOffset > 0 && hasMoreMessages) {
-        html += '<div class="loading-more">Loading older messages...</div>';
-    }
-
-    if (!hasMoreMessages && messages.length >= CONFIG.MESSAGE_LOAD_LIMIT) {
-        html += '<div class="no-more-messages">No more messages</div>';
-    }
+    noMoreMessages(messages.length, hasMoreMessages, html, CONFIG.MESSAGE_LOAD_LIMIT);
 
     html += messages.map(msg => {
         const isSent = msg.sender_id === currentUser.id;
@@ -184,6 +179,38 @@ function renderMessages() {
     }).join('');
 
     list.innerHTML = html;
+}
+
+function prependMessages(newMessages) {
+    const list = getElement('messages-list');
+    const currentUser = store.get('currentUser');
+    const hasMoreMessages = store.get('hasMoreMessages');
+    const messages = store.get('messages');
+
+    const empty = list.querySelector('.no-messages');
+    if (empty) {
+        empty.remove();
+    }
+
+    const fragment = document.createDocumentFragment();
+
+    noMoreMessages(messages.length, hasMoreMessages, fragment, CONFIG.MESSAGE_LOAD_LIMIT);
+
+    newMessages.forEach(msg => {
+        const isSent = msg.sender_id === currentUser.id;
+
+        const bubble = document.createElement('div');
+        bubble.classList.add('message-bubble', isSent ? 'sent' : 'received');
+        
+        bubble.innerHTML = `
+            ${isSent ? '' : `<div class="message-sender">${escapeHtml(msg.sender_name)}</div>`}
+            <div>${escapeHtml(msg.content)}</div>
+            <div class="message-time">${formatDate(msg.created_at)}</div>
+        `;
+        fragment.appendChild(bubble);
+    });
+    
+    list.prepend(fragment);
 }
 
 export async function handleSendMessage(e) {
@@ -232,10 +259,6 @@ export function closeChatPanel() {
         messageOffset: 0,
         hasMoreMessages: true
     });
-
-    const container = getElement('messages-container');
-    container.removeEventListener('scroll', handleMessageScroll);
-    container.removeEventListener('scroll', throttledHandleMessageScroll);
 }
 
 window.messagesModule = { openChat };

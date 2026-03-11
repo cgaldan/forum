@@ -20,29 +20,6 @@ export function formatDate(dateString) {
     return date.toLocaleDateString();
 }
 
-export function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-}
-
-export function throttle(func, limit) {
-    let inThrottle;
-    return function(...args) {
-        if (!inThrottle) {
-            func.apply(this, args);
-            inThrottle = true;
-            setTimeout(() => inThrottle = false, limit);
-        }
-    };
-}
-
 export function getElement(id) {
     return document.getElementById(id);
 }
@@ -55,4 +32,13 @@ export function setText(id, text) {
 export function toggleClass(id, className) {
     const el = getElement(id);
     if (el) el.classList.toggle(className);
+}
+
+export function noMoreMessages(messagesLength, hasMoreMessages, fragment, loadLimit) {
+    if (!hasMoreMessages && messagesLength >= loadLimit) {
+        const noMoreMessages = document.createElement('div');
+        noMoreMessages.classList.add('no-more-messages');
+        noMoreMessages.textContent = 'No more messages';
+        fragment.appendChild(noMoreMessages);
+    }
 }
