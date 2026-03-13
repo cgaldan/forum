@@ -41,6 +41,8 @@ export function connectWebSocket() {
             console.log('WebSocket disconnected');
             updateConnectionStatus('offline', 'Disconnected');
 
+            if (!store.get('token')) return;
+
             const attempts = store.get('wsReconnectAttempts');
             if (attempts < CONFIG.WS_RECONNECT_ATTEMPTS) {
                 store.set('wsReconnectAttempts', attempts + 1);

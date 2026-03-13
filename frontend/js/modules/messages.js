@@ -54,9 +54,7 @@ export async function openChat(userId, nickname) {
     await loadMessages(userId, true);
     await loadConversations();
 
-    if (!observer) {
-        setupMessageObserver();
-    }
+    setupMessageObserver();
 }
 
 export async function loadMessages(userId, isInitial = false) {
@@ -97,12 +95,12 @@ export async function loadMessages(userId, isInitial = false) {
                     messages,
                     messageOffset: state.messageOffset + newMessages.length
                 });
+            }
 
-                if (isInitial) {
-                    renderMessages();
-                } else {
-                    prependMessages(newMessages);
-                }
+            if (isInitial) {
+                renderMessages();
+            } else if (newMessages.length > 0) {
+                prependMessages(newMessages);
             }
         }
     } catch (error) {
@@ -125,8 +123,14 @@ export async function loadMessages(userId, isInitial = false) {
 }
 
 function setupMessageObserver() {
+    if (observer) {
+        observer.disconnect();
+        observer = null;
+    }
+
     const container = getElement('messages-container');
     const trigger = getElement('load-trigger');
+    if (!trigger) return;
 
     observer = new IntersectionObserver(entries => {
         const entry = entries[0];
@@ -194,7 +198,7 @@ function prependMessages(newMessages) {
 
     const fragment = document.createDocumentFragment();
 
-    noMoreMessages(messages.length, hasMoreMessages, fragment, CONFIG.MESSAGE_LOAD_LIMIT);
+    noMoreMessages(hasMoreMessages, fragment);
 
     newMessages.forEach(msg => {
         const isSent = msg.sender_id === currentUser.id;

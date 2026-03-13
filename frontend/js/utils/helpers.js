@@ -34,8 +34,8 @@ export function toggleClass(id, className) {
     if (el) el.classList.toggle(className);
 }
 
-export function noMoreMessages(messagesLength, hasMoreMessages, fragment, loadLimit) {
-    if (!hasMoreMessages && messagesLength >= loadLimit) {
+export function noMoreMessages(hasMoreMessages, fragment) {
+    if (!hasMoreMessages) {
         const noMoreMessages = document.createElement('div');
         noMoreMessages.classList.add('no-more-messages');
         noMoreMessages.textContent = 'No more messages';
