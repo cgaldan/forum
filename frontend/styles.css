@@ -781,7 +781,7 @@ body {
 .no-more-messages {
     text-align: center;
     color: var(--text-light);
-    padding: 12px;
+    padding-bottom: 18px;
     font-size: 0.8em;
     font-style: italic;
 }
@@ -818,6 +818,8 @@ body {
     padding: 14px 28px;
     white-space: nowrap;
     align-self: flex-end;
+    width: fit-content;
+    font-size: 15px;
 }
 
 /* ============================================

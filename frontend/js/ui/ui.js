@@ -1,6 +1,6 @@
 import { getElement, toggleClass } from '../utils/helpers.js';
 import { CONFIG } from '../config.js';
-import { escapeHtml } from '../utils/helpers.js';
+import { escapeHtml, formatDate } from '../utils/helpers.js';
 import store from '../state/store.js';
 
 export function showError(elementId, message) {
@@ -90,4 +90,12 @@ export function switchAuthTab(tab) {
 export function sidebar() {
     const sidebar = document.querySelector(".messaging-sidebar");
     sidebar.classList.toggle("collapsed");
+}
+
+export function createMessageHTML(message, isSent = false) {
+    return `
+        ${isSent ? '' : `<div class="message-sender">${escapeHtml(message.sender_name)}</div>`}
+        <div>${escapeHtml(message.content)}</div>
+        <div class="message-time">${formatDate(message.created_at)}</div>
+    `;
 }

@@ -2,6 +2,7 @@ import api from '../api/client.js';
 import store from '../state/store.js';
 import { escapeHtml, formatDate, getElement, noMoreMessages } from '../utils/helpers.js';
 import { CONFIG } from '../config.js';
+import { createMessageHTML } from '../ui/ui.js';
 
 export async function loadConversations() {
     try {
@@ -147,7 +148,6 @@ function setupMessageObserver() {
 
 function renderMessages() {
     const list = getElement('messages-list');
-    const state = store.getState();
     const messages = store.get('messages');
     const currentUser = store.get('currentUser');
     const hasMoreMessages = store.get('hasMoreMessages');
@@ -165,15 +165,15 @@ function renderMessages() {
 
     let html = '';
 
-    noMoreMessages(messages.length, hasMoreMessages, html, CONFIG.MESSAGE_LOAD_LIMIT);
+    if (!hasMoreMessages) {
+        html += '<div class="no-more-messages">No more messages</div>';
+    }
 
     html += messages.map(msg => {
         const isSent = msg.sender_id === currentUser.id;
         return `
             <div class="message-bubble ${isSent ? 'sent' : 'received'}">
-                ${isSent ? '' : `<div class="message-sender">${escapeHtml(msg.sender_name)}</div>`}
-                <div>${escapeHtml(msg.content)}</div>
-                <div class="message-time">${formatDate(msg.created_at)}</div>
+                ${createMessageHTML(msg, isSent)}
             </div>
         `;
     }).join('');
@@ -187,7 +187,7 @@ function prependMessages(newMessages) {
     const hasMoreMessages = store.get('hasMoreMessages');
     const messages = store.get('messages');
 
-    const empty = list.querySelector('.no-messages');
+    const empty = list.querySelector('.no-more-messages');
     if (empty) {
         empty.remove();
     }
@@ -202,11 +202,7 @@ function prependMessages(newMessages) {
         const bubble = document.createElement('div');
         bubble.classList.add('message-bubble', isSent ? 'sent' : 'received');
         
-        bubble.innerHTML = `
-            ${isSent ? '' : `<div class="message-sender">${escapeHtml(msg.sender_name)}</div>`}
-            <div>${escapeHtml(msg.content)}</div>
-            <div class="message-time">${formatDate(msg.created_at)}</div>
-        `;
+        bubble.innerHTML = createMessageHTML(msg, isSent);
         fragment.appendChild(bubble);
     });
     
