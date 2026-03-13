@@ -52,7 +52,7 @@ export async function openChat(userId, nickname) {
     if (list) list.innerHTML = '';
 
     const headerEl = getElement('chat-user-name');
-    headerEl.innerHTML = `<div class="chat-header-avatar" aria-hidden="true">${nickname.charAt(0).toUpperCase()}</div>${nickname.replace(/</g, '&lt;').replace(/>/g, '&gt;')}`;
+    headerEl.innerHTML = `<div class="sidebar-avatar" aria-hidden="true">${nickname.charAt(0).toUpperCase()}</div>${nickname.replace(/</g, '&lt;').replace(/>/g, '&gt;')}`;
     getElement('message-panel').classList.remove('hidden');
 
     await loadMessages(userId, true);
