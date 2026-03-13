@@ -33,7 +33,7 @@ class ApiClient {
         try {
             const response = await fetch(url, config);
             
-            if (!response.ok && response.status !== 200) {
+            if (!response.ok) {
                 throw new Error(`HTTP ${response.status}`);
             }
 
