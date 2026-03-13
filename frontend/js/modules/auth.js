@@ -19,6 +19,9 @@ export async function handleLogin(e) {
     const identifier = getElement('login-identifier').value;
     const password = getElement('login-password').value;
 
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Logging in...'; }
+
     try {
         const data = await api.login(identifier, password);
 
@@ -34,6 +37,8 @@ export async function handleLogin(e) {
     } catch (error) {
         showError('login-error', 'Network error. Please check if the server is running.');
         console.error('Login error:', error);
+    } finally {
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Login'; }
     }
 }
 
@@ -51,6 +56,9 @@ export async function handleRegister(e) {
         gender: getElement('register-gender').value
     };
 
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Registering...'; }
+
     try {
         const data = await api.register(formData);
 
@@ -66,6 +74,8 @@ export async function handleRegister(e) {
     } catch (error) {
         showError('register-error', 'Network error. Please check if the server is running.');
         console.error('Register error:', error);
+    } finally {
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Register'; }
     }
 }
 
@@ -128,12 +138,7 @@ function showAuthView() {
 
     const messagePanel = getElement('message-panel');
     if (messagePanel) messagePanel.classList.add('hidden');
-    
-    const messagesContainer = getElement('messages-container');
-    if (messagesContainer) {
-        messagesContainer.innerHTML = '<div class="no-messages">Select a user to start chatting</div>';
-    }
-    
+
     const conversationsContainer = getElement('conversations-container');
     if (conversationsContainer) {
         conversationsContainer.innerHTML = '<div class="no-conversations">No conversations yet</div>';
