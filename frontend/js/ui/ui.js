@@ -115,12 +115,12 @@ export function sidebar() {
 export function closeSidebar() {
     const sidebarEl = document.querySelector('.messaging-sidebar');
     if (!sidebarEl) return;
+    document.body.style.overflow = '';
     const isMobile = window.innerWidth <= 768;
     if (isMobile) {
         sidebarEl.classList.remove('open');
         const backdrop = getElement('sidebar-backdrop');
         if (backdrop) backdrop.classList.remove('visible');
-        document.body.style.overflow = '';
     } else {
         sidebarEl.classList.add('collapsed');
         const btn = getElement('toggle-sidebar');

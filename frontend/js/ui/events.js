@@ -72,6 +72,16 @@ function setupMainViewListeners() {
 
     const backdrop = getElement('sidebar-backdrop');
     if (backdrop) backdrop.addEventListener('click', closeSidebar);
+
+    window.addEventListener('resize', () => {
+        if (window.innerWidth > 768) {
+            document.body.style.overflow = '';
+            const sidebarEl = document.querySelector('.messaging-sidebar');
+            if (sidebarEl) sidebarEl.classList.remove('open');
+            const sidebarBackdrop = getElement('sidebar-backdrop');
+            if (sidebarBackdrop) sidebarBackdrop.classList.remove('visible');
+        }
+    });
 }
 
 

@@ -734,6 +734,8 @@ body {
     flex-direction: column;
     height: calc(100vh - 140px);
     overflow: hidden;
+    position: sticky;
+    top: 100px;
     border: 1px solid var(--border);
 }
 
