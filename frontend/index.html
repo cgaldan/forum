@@ -84,6 +84,9 @@
             <header class="header" role="banner">
                 <h1>Forum</h1>
                 <div class="header-right">
+                    <button id="toggle-sidebar" class="sidebar-toggle-btn btn-icon" aria-label="Toggle messages" aria-expanded="true">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    </button>
                     <div class="connection-status" role="status" aria-live="polite">
                         <span id="ws-status" class="status-indicator offline" aria-hidden="true">●</span>
                         <span id="ws-status-text">Connecting...</span>
@@ -101,7 +104,7 @@
                     <aside class="messaging-sidebar">
                         <div class="sidebar-header">
                             <h3>Messages</h3>
-                            <button id="toggle-sidebar" class="btn-icon">◀</button>
+                            <button id="close-sidebar-btn" class="btn-icon sidebar-close-btn" aria-label="Close messages">✕</button>
                         </div>
                         <div class="online-users-list">
                             <h4>Online Users</h4>
@@ -209,6 +212,7 @@
                         </div>
                     </div>
                 </div>
+                <div id="sidebar-backdrop" class="sidebar-backdrop" aria-hidden="true"></div>
             </main>
         </div>
     </div>

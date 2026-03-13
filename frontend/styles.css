@@ -505,7 +505,7 @@ body {
     overflow-x: hidden;
     flex-shrink: 0;
     border: 1px solid var(--border);
-    transition: width 0.3s ease;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease;
     position: sticky;
     top: 100px;
     align-self: flex-start;
@@ -513,19 +513,38 @@ body {
 
 .messaging-sidebar:hover { box-shadow: var(--shadow); }
 
-.messaging-sidebar.collapsed { width: 56px; }
-
-.messaging-sidebar.collapsed .online-users-list,
-.messaging-sidebar.collapsed .conversations-list {
+.messaging-sidebar.collapsed {
+    width: 0;
+    padding-left: 0;
+    padding-right: 0;
+    border-left-width: 0;
+    border-right-width: 0;
     opacity: 0;
     pointer-events: none;
+    overflow: hidden;
 }
 
-.messaging-sidebar.collapsed h3,
-.messaging-sidebar.collapsed h4 {
-    opacity: 0;
-    pointer-events: none;
+.sidebar-close-btn { display: inline-flex; }
+
+.sidebar-toggle-btn {
+    color: var(--primary);
+    background: rgba(99, 102, 241, 0.08);
+    border: 1.5px solid rgba(99, 102, 241, 0.18);
+    flex-shrink: 0;
 }
+
+.sidebar-toggle-btn:hover {
+    background: rgba(99, 102, 241, 0.15);
+    border-color: rgba(99, 102, 241, 0.3);
+    transform: scale(1.08);
+}
+
+.sidebar-toggle-btn[aria-expanded="false"] {
+    color: var(--text-medium);
+    background: var(--bg-light);
+    border-color: var(--border);
+}
+
 .sidebar-header {
     display: flex;
     justify-content: space-between;
@@ -1317,10 +1336,6 @@ body {
     box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
 }
 
-/* ============================================
-   ACCESSIBILITY
-   ============================================ */
-
 .sr-only {
     position: absolute;
     width: 1px;
@@ -1351,6 +1366,7 @@ body {
         width: 100%;
         height: auto;
         max-height: 400px;
+        position: static;
     }
 
     .message-panel {
@@ -1365,20 +1381,20 @@ body {
     }
 
     .header {
-        flex-direction: column;
-        gap: 16px;
-        text-align: center;
-        padding: 16px 20px;
+        padding: 0 16px;
+        height: 62px;
     }
 
     .header h1 {
-        font-size: 1.75em;
+        font-size: 1.4em;
     }
 
-    .header-right {
-        flex-direction: column;
-        gap: 12px;
-        width: 100%;
+    .connection-status {
+        display: none;
+    }
+
+    #current-user {
+        display: none;
     }
 
     .main-content {
@@ -1400,7 +1416,62 @@ body {
     }
 
     .messaging-sidebar {
+        display: flex !important;
+        flex-direction: column;
+        position: fixed !important;
+        top: 62px;
+        left: 0;
+        bottom: 0;
+        width: 300px !important;
+        max-width: 85vw !important;
+        height: auto !important;
+        max-height: none !important;
+        border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+        z-index: 300;
+        padding: 20px !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        transform: translateX(-100%);
+        opacity: 1 !important;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        box-shadow: 6px 0 28px rgba(15, 23, 42, 0.18);
+    }
+
+    .messaging-sidebar.collapsed {
+        width: 300px !important;
+        max-width: 85vw !important;
+        padding-left: 20px !important;
+        padding-right: 20px !important;
+        border-width: 1px !important;
+        opacity: 1 !important;
+        overflow: auto !important;
+        transform: translateX(-100%) !important;
+    }
+
+    .messaging-sidebar.open {
+        transform: translateX(0) !important;
+    }
+
+    .sidebar-backdrop {
         display: none;
+        position: fixed;
+        inset: 0;
+        top: 62px;
+        background: rgba(15, 23, 42, 0.45);
+        z-index: 299;
+        cursor: pointer;
+        backdrop-filter: blur(2px);
+        -webkit-backdrop-filter: blur(2px);
+    }
+
+    .sidebar-backdrop.visible {
+        display: block;
+        animation: backdropFadeIn 0.22s ease-out;
+    }
+
+    @keyframes backdropFadeIn {
+        from { opacity: 0; }
+        to   { opacity: 1; }
     }
 
     .message-panel {

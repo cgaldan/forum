@@ -93,9 +93,39 @@ export function switchAuthTab(tab) {
 
 export function sidebar() {
     const sidebarEl = document.querySelector('.messaging-sidebar');
-    sidebarEl.classList.toggle('collapsed');
-    const btn = getElement('toggle-sidebar');
-    if (btn) btn.textContent = sidebarEl.classList.contains('collapsed') ? '▶' : '◀';
+    if (!sidebarEl) return;
+    const isMobile = window.innerWidth <= 768;
+
+    if (isMobile) {
+        if (sidebarEl.classList.contains('open')) {
+            closeSidebar();
+        } else {
+            sidebarEl.classList.add('open');
+            const backdrop = getElement('sidebar-backdrop');
+            if (backdrop) backdrop.classList.add('visible');
+            document.body.style.overflow = 'hidden';
+        }
+    } else {
+        const isCollapsed = sidebarEl.classList.toggle('collapsed');
+        const btn = getElement('toggle-sidebar');
+        if (btn) btn.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
+    }
+}
+
+export function closeSidebar() {
+    const sidebarEl = document.querySelector('.messaging-sidebar');
+    if (!sidebarEl) return;
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile) {
+        sidebarEl.classList.remove('open');
+        const backdrop = getElement('sidebar-backdrop');
+        if (backdrop) backdrop.classList.remove('visible');
+        document.body.style.overflow = '';
+    } else {
+        sidebarEl.classList.add('collapsed');
+        const btn = getElement('toggle-sidebar');
+        if (btn) btn.setAttribute('aria-expanded', 'false');
+    }
 }
 
 export function createMessageHTML(message, isSent = false) {

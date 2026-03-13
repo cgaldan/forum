@@ -14,7 +14,7 @@ import {
     handleSendMessage, 
     closeChatPanel 
 } from '../modules/messages.js';
-import { switchAuthTab, sidebar } from './ui.js';
+import { switchAuthTab, sidebar, closeSidebar } from './ui.js';
 
 
 export function setupEventListeners() {
@@ -66,6 +66,12 @@ function setupMainViewListeners() {
 
     const toggleSidebar = getElement('toggle-sidebar');
     if (toggleSidebar) toggleSidebar.addEventListener('click', sidebar);
+
+    const closeSidebarBtn = getElement('close-sidebar-btn');
+    if (closeSidebarBtn) closeSidebarBtn.addEventListener('click', closeSidebar);
+
+    const backdrop = getElement('sidebar-backdrop');
+    if (backdrop) backdrop.addEventListener('click', closeSidebar);
 }
 
 
@@ -80,6 +86,11 @@ function setupKeyboardNavigation() {
             const messagePanel = getElement('message-panel');
             if (messagePanel && !messagePanel.classList.contains('hidden')) {
                 closeChatPanel();
+            }
+
+            const mobileSidebar = document.querySelector('.messaging-sidebar');
+            if (mobileSidebar && mobileSidebar.classList.contains('open')) {
+                closeSidebar();
             }
         }
     });
