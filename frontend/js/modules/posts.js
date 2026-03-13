@@ -75,6 +75,9 @@ export async function handleCreatePost(e) {
     }
 
     const submitBtn = e.target.querySelector('button[type="submit"]');
+    if (!submitBtn) {
+        return;
+    }
     submitBtn.disabled = true;
     submitBtn.textContent = 'Posting...';
 
