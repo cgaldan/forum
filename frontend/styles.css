@@ -30,6 +30,8 @@
     --radius-xl: 20px;
 }
 
+html { scroll-behavior: smooth; }
+
 body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -69,6 +71,11 @@ body {
     display: none !important;
 }
 
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-dark); border-radius: var(--radius-full); }
+::-webkit-scrollbar-thumb:hover { background: var(--text-light); }
+
 /* ============================================
    AUTHENTICATION VIEW
    ============================================ */
@@ -78,7 +85,34 @@ body {
     align-items: center;
     justify-content: center;
     min-height: 100vh;
-    padding: 20px;
+    padding: 24px;
+    background: #0c0a1e;
+    position: relative;
+    overflow: hidden;
+}
+
+#auth-view::before {
+    content: '';
+    position: absolute;
+    top: -20%;
+    left: -10%;
+    width: 55%;
+    height: 70%;
+    background: radial-gradient(ellipse, rgba(79, 70, 229, 0.25) 0%, transparent 65%);
+    pointer-events: none;
+    animation: orbFloat 8s ease-in-out infinite alternate;
+}
+
+#auth-view::after {
+    content: '';
+    position: absolute;
+    bottom: -20%;
+    right: -10%;
+    width: 55%;
+    height: 70%;
+    background: radial-gradient(ellipse, rgba(124, 58, 237, 0.2) 0%, transparent 65%);
+    pointer-events: none;
+    animation: orbFloat 10s ease-in-out infinite alternate-reverse;
 }
 
 .auth-container {
@@ -105,7 +139,7 @@ body {
 
 .auth-container h1 {
     text-align: center;
-    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 50%, var(--accent) 100%);
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 60%, var(--accent) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -173,6 +207,7 @@ body {
     color: var(--text-dark);
     font-size: 1.5em;
     font-weight: 700;
+    letter-spacing: -0.02em;
 }
 
 .form-group {
@@ -199,14 +234,23 @@ body {
     background: var(--bg-white);
     color: var(--text-dark);
     font-family: inherit;
+    appearance: none;
+    -webkit-appearance: none;
 }
+
+.form-group input::placeholder,
+.form-group textarea::placeholder { color: var(--text-muted); }
+
+.form-group input:hover,
+.form-group select:hover,
+.form-group textarea:hover { border-color: var(--border-dark); }
 
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
     outline: none;
     border-color: var(--primary);
-    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
 }
 
 .btn {
@@ -294,8 +338,8 @@ body {
 
 @keyframes shake {
     0%, 100% { transform: translateX(0); }
-    25% { transform: translateX(-10px); }
-    75% { transform: translateX(10px); }
+    20%, 60% { transform: translateX(-10px); }
+    40%, 80% { transform: translateX(10px); }
 }
 
 /* ============================================
@@ -309,7 +353,8 @@ body {
 }
 
 .header {
-    background: rgba(255, 255, 255, 0.95);
+    background: var(--bg-white);
+    height : 75px;
     padding: 20px 40px;
     box-shadow: var(--shadow);
     display: flex;
@@ -317,9 +362,10 @@ body {
     align-items: center;
     position: sticky;
     top: 0;
-    z-index: 100;
+    z-index: 200;
     backdrop-filter: blur(20px);
     border-bottom: 1px solid var(--border);
+    box-shadow: var(--shadow-xs);
 }
 
 .header h1 {
@@ -355,7 +401,9 @@ body {
     width: 10px;
     height: 10px;
     border-radius: 50%;
+    display: inline-block;
     position: relative;
+    flex-shrink: 0;
 }
 
 .status-indicator::before {
@@ -439,6 +487,7 @@ body {
     gap: 24px;
     max-width: 1600px;
     margin: 0 auto;
+    align-items: flex-start;
 }
 
 /* ============================================
@@ -453,14 +502,23 @@ body {
     padding: 24px;
     height: calc(100vh - 140px);
     overflow-y: auto;
+    overflow-x: hidden;
     flex-shrink: 0;
     border: 1px solid var(--border);
     transition: width 0.3s ease;
-    overflow: hidden;
+    position: sticky;
+    top: 100px;
+    align-self: flex-start;
 }
 
-.messaging-sidebar.collapsed {
-    width: 80px;
+.messaging-sidebar:hover { box-shadow: var(--shadow); }
+
+.messaging-sidebar.collapsed { width: 56px; }
+
+.messaging-sidebar.collapsed .online-users-list,
+.messaging-sidebar.collapsed .conversations-list {
+    opacity: 0;
+    pointer-events: none;
 }
 
 .messaging-sidebar.collapsed h3,
@@ -468,24 +526,6 @@ body {
     opacity: 0;
     pointer-events: none;
 }
-
-.messaging-sidebar::-webkit-scrollbar {
-    width: 6px;
-}
-
-.messaging-sidebar::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.messaging-sidebar::-webkit-scrollbar-thumb {
-    background: var(--border);
-    border-radius: 3px;
-}
-
-.messaging-sidebar::-webkit-scrollbar-thumb:hover {
-    background: var(--text-light);
-}
-
 .sidebar-header {
     display: flex;
     justify-content: space-between;
@@ -541,6 +581,9 @@ body {
 
 .user-item,
 .conversation-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     padding: 14px;
     border-radius: var(--radius);
     margin-bottom: 6px;
@@ -586,6 +629,22 @@ body {
     width: 4px;
 }
 
+.sidebar-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 9999px;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11.5px;
+    font-weight: 700;
+    flex-shrink: 0;
+    text-transform: uppercase;
+    user-select: none;
+}
+
 .user-item-name,
 .conversation-name {
     font-weight: 700;
@@ -604,6 +663,7 @@ body {
     align-items: center;
     gap: 6px;
     font-weight: 600;
+    margin-top: 4px;
 }
 
 .user-item-status::before {

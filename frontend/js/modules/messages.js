@@ -27,11 +27,14 @@ function renderConversations() {
 
     container.innerHTML = conversations.map(conv => `
         <div class="conversation-item" onclick="window.messagesModule.openChat(${conv.user_id}, '${escapeHtml(conv.nickname)}')">
-            <div class="conversation-name">
-                ${escapeHtml(conv.nickname)}
-                ${conv.unread_count > 0 ? `<span class="conversation-unread">${conv.unread_count}</span>` : ''}
+            <div class="sidebar-avatar" aria-hidden="true">${escapeHtml(conv.nickname.charAt(0))}</div>
+            <div class="conversation-body">
+                <div class="conversation-name">
+                    <span>${escapeHtml(conv.nickname)}</span>
+                    ${conv.unread_count > 0 ? `<span class="conversation-unread">${conv.unread_count}</span>` : ''}
+                </div>
+                <div class="conversation-preview">${escapeHtml(conv.last_message)}</div>
             </div>
-            <div class="conversation-preview">${escapeHtml(conv.last_message)}</div>
         </div>
     `).join('');
 }
@@ -48,7 +51,8 @@ export async function openChat(userId, nickname) {
     const list = getElement('messages-list');
     if (list) list.innerHTML = '';
 
-    getElement('chat-user-name').textContent = nickname;
+    const headerEl = getElement('chat-user-name');
+    headerEl.innerHTML = `<div class="chat-header-avatar" aria-hidden="true">${nickname.charAt(0).toUpperCase()}</div>${nickname.replace(/</g, '&lt;').replace(/>/g, '&gt;')}`;
     getElement('message-panel').classList.remove('hidden');
 
     await loadMessages(userId, true);

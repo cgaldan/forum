@@ -15,6 +15,7 @@ export function clearError(elementId) {
     const errorElement = getElement(elementId);
     if (errorElement) {
         errorElement.textContent = '';
+        errorElement.classList.remove('show');
     }
 }
 
@@ -59,8 +60,11 @@ export function renderOnlineUsers() {
     if (container) {
         container.innerHTML = otherUsers.map(user => `
             <div class="user-item" onclick="window.messagesModule.openChat(${user.user_id}, '${escapeHtml(user.nickname)}')">
-                <div class="user-item-name">${escapeHtml(user.nickname)}</div>
-                <div class="user-item-status">● Online</div>
+                <div class="sidebar-avatar" aria-hidden="true">${escapeHtml(user.nickname.charAt(0))}</div>
+                <div class="user-item-info">
+                    <div class="user-item-name">${escapeHtml(user.nickname)}</div>
+                    <div class="user-item-status">Online</div>
+                </div>
             </div>
         `).join('');
     }
@@ -88,14 +92,16 @@ export function switchAuthTab(tab) {
 }
 
 export function sidebar() {
-    const sidebar = document.querySelector(".messaging-sidebar");
-    sidebar.classList.toggle("collapsed");
+    const sidebarEl = document.querySelector('.messaging-sidebar');
+    sidebarEl.classList.toggle('collapsed');
+    const btn = getElement('toggle-sidebar');
+    if (btn) btn.textContent = sidebarEl.classList.contains('collapsed') ? '▶' : '◀';
 }
 
 export function createMessageHTML(message, isSent = false) {
     return `
         ${isSent ? '' : `<div class="message-sender">${escapeHtml(message.sender_name)}</div>`}
-        <div>${escapeHtml(message.content)}</div>
+        <div class="message-bubble-body">${escapeHtml(message.content)}</div>
         <div class="message-time">${formatDate(message.created_at)}</div>
     `;
 }
