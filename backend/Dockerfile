@@ -4,22 +4,25 @@ RUN apk add --no-cache git gcc musl-dev sqlite-dev
 
 WORKDIR /app
 
-COPY go.mod go.sum ./
+COPY backend/go.mod backend/go.sum ./
 RUN go mod download
 
-COPY . .
+COPY backend/ .
 
 RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o main ./cmd/server
 
 FROM alpine:latest
 
-RUN apk --no-cache add ca-certificates sqlite-libs
+RUN apk --no-cache add ca-certificates sqlite-libs wget
 
 WORKDIR /root/
 
 COPY --from=builder /app/main .
+COPY frontend/ ./frontend/
 
 RUN mkdir -p ./data
+
+ENV ENVIRONMENT=production
 
 EXPOSE 8000
 

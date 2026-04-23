@@ -32,7 +32,7 @@ clean:
 
 docker-build:
 	@echo "Building Docker image..."
-	@docker build -t forum-backend:latest .
+	@docker build -f Dockerfile -t forum-backend:latest ..
 
 docker-run:
 	@echo "Running Docker container..."
