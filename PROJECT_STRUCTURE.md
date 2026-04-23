@@ -6,14 +6,13 @@ This document provides a detailed overview of the project's file and directory s
 
 ```
 real-time-forum/
-├── .github/                    # GitHub-specific files
-│   └── workflows/             # CI/CD workflows
+├── .github/                  # GitHub-specific files
+│   └── workflows/            # CI/CD workflows
 │       └── ci.yml            # Continuous Integration pipeline
-├── backend/                   # Backend Go application
-├── frontend/                  # Frontend application
+├── backend/                  # Backend Go application
+├── frontend/                 # Frontend application
 ├── .gitignore                # Git ignore rules
 ├── API.md                    # API documentation
-├── CHANGELOG.md              # Version history
 ├── CONTRIBUTING.md           # Contribution guidelines
 ├── DEPLOYMENT.md             # Deployment guide
 ├── docker-compose.yml        # Docker Compose configuration
@@ -26,28 +25,43 @@ real-time-forum/
 
 ```
 backend/
-├── cmd/                      # Application entry points
+├── cmd/                     # Application entry points
 │   └── server/              # Main server application
 │       └── main.go          # Entry point with initialization
+├── data/
+│   └── database/             # Database entry point
+│       └── forum.db          # Database file after project initialization
 │
-├── internal/                # Private application code
+├── internal/               # Private application code
 │   ├── api/                # API layer
 │   │   ├── handlers/       # HTTP request handlers
-│   │   │   ├── auth_handler.go        # Authentication endpoints
-│   │   │   ├── comment_handler.go     # Comment endpoints
-│   │   │   ├── health_handler.go      # Health check endpoint
-│   │   │   ├── message_handler.go     # Messaging endpoints
-│   │   │   ├── post_handler.go        # Post endpoints
-│   │   │   └── websocket_handler.go   # WebSocket endpoint
+│   │   │   ├── auth_handler.go
+│   │   │   ├── comment_handler.go
+│   │   │   ├── health_handler.go
+│   │   │   ├── message_handler.go
+│   │   │   ├── post_handler.go
+│   │   │   └── websocket_handler.go
 │   │   │
-│   │   ├── middleware/     # HTTP middleware
-│   │   │   └── middleware.go          # All middleware functions
+│   │   ├── middleware/     # HTTP middlewares
+│   │   │   ├── CORS.go
+│   │   │   ├── logging.go
+│   │   │   ├── middleware_helpers.go
+│   │   │   ├── rate_limiter.go
+│   │   │   ├── recovery.go
+│   │   │   └── security_headers.go
 │   │   │
 │   │   └── router/         # Routing configuration
-│   │       └── router.go              # Route definitions
+│   │       ├── router_without_gorilla.go       # Route definitions without using gorilla mux package
+│   │       ├── router.go                       # Route definitions
+
 │   │
 │   ├── config/             # Configuration management
+│   │   ├── config_models.go           # All configuration models
+│   │   ├── config_utils.go            # Configuration helper functions
 │   │   └── config.go                  # Configuration loading and validation
+│   │
+│   ├── database/             # Domain models and DTOs
+│   │   └── database.go                # Database initialization functions and migrations
 │   │
 │   ├── domain/             # Domain models and DTOs
 │   │   ├── models.go                  # Core domain models
@@ -56,27 +70,36 @@ backend/
 │   │
 │   ├── repository/         # Data access layer
 │   │   ├── comment_repository.go      # Comment data access
-│   │   ├── database.go                # Database initialization
+│   │   ├── comment_repository_test.go # Comment repository tests
+│   │   ├── message_repository_test.go # Message repository tests
 │   │   ├── message_repository.go      # Message data access
+│   │   ├── post_repository_test.go    # Post repository tests
 │   │   ├── post_repository.go         # Post data access
 │   │   ├── repositories.go            # Repository factory
+│   │   ├── session_repository_test.go # Session repository tests
 │   │   ├── session_repository.go      # Session data access
-│   │   ├── user_repository.go         # User data access
-│   │   └── user_repository_test.go    # User repository tests
+│   │   ├── test_utils.go              # Tests helper functions
+│   │   ├── user_repository_test.go    # User repository tests
+│   │   └── user_repository.go         # User data access
 │   │
 │   ├── service/            # Business logic layer
-│   │   ├── auth_service.go            # Authentication logic
 │   │   ├── auth_service_test.go       # Authentication tests
+│   │   ├── auth_service.go            # Authentication logic
+│   │   ├── comment_service_test.go    # Comment tests
 │   │   ├── comment_service.go         # Comment logic
+│   │   ├── message_service_test.go    # Messaging tests
 │   │   ├── message_service.go         # Messaging logic
+│   │   ├── post_service_test.go       # Post tests
 │   │   ├── post_service.go            # Post logic
+│   │   ├── service_test_helpers.go    # Service test helper functions
 │   │   └── services.go                # Service factory
 │   │
 │   └── websocket/          # WebSocket management
 │       ├── client.go                  # WebSocket client
-│       └── hub.go                     # WebSocket hub
+│       ├── hub.go                     # WebSocket hub
+│       └── ws_utils.go                     # WebSocket helper functions
 │
-├── pkg/                    # Public packages
+├── packages/                    # Public packages
 │   └── logger/            # Logging package
 │       └── logger.go                  # Logger implementation
 │
@@ -91,16 +114,37 @@ backend/
 
 ```
 frontend/
-├── app.js                 # Main application logic
-│   ├── Configuration
-│   ├── State management
-│   ├── Initialization
-│   ├── Authentication handlers
-│   ├── Post management
-│   ├── Comment handlers
-│   ├── Message handlers
-│   ├── WebSocket handlers
-│   └── Utility functions
+├── js/                   # JavaScript modules
+│   ├── config.js         # Configuration settings
+│   ├── main.js           # Main application entry point
+│   │   ├── Configuration
+│   │   ├── State management
+│   │   ├── Initialization
+│   │   ├── Authentication handlers
+│   │   ├── Post management
+│   │   ├── Comment handlers
+│   │   ├── Message handlers
+│   │   ├── WebSocket handlers
+│   │   └── Utility functions
+│   │
+│   ├── api/
+│   │   └── client.js     # API client for HTTP requests
+│   │
+│   ├── modules/          # Feature-specific modules
+│   │   ├── auth.js       # Authentication module
+│   │   ├── messages.js   # Messaging module
+│   │   ├── posts.js      # Posts module
+│   │   └── websocket.js  # WebSocket module
+│   │
+│   ├── state/
+│   │   └── store.js      # State management store
+│   │
+│   ├── ui/               # UI-related modules
+│   │   ├── events.js     # Event handlers
+│   │   └── ui.js         # UI manipulation functions
+│   │
+│   └── utils/
+│       └── helpers.js    # Utility helper functions
 │
 ├── index.html            # HTML structure
 │   ├── Authentication view
@@ -181,71 +225,6 @@ Hub (Broadcast messages)
 All Connected Clients
 ```
 
-## File Responsibilities
-
-### Backend
-
-#### `cmd/server/main.go`
-- Application initialization
-- Configuration loading
-- Database setup
-- Service initialization
-- Router setup
-- Graceful shutdown
-
-#### `internal/api/handlers/`
-- HTTP request handling
-- Request validation
-- Response formatting
-- Error handling
-
-#### `internal/service/`
-- Business logic
-- Data validation
-- Data transformation
-- Orchestration of repositories
-
-#### `internal/repository/`
-- Database queries
-- Data persistence
-- Data retrieval
-- Transaction management
-
-#### `internal/domain/`
-- Data structures
-- Request/Response DTOs
-- Domain models
-
-#### `internal/config/`
-- Configuration loading
-- Environment variable parsing
-- Configuration validation
-
-#### `pkg/logger/`
-- Structured logging
-- Log levels
-- Log formatting
-
-### Frontend
-
-#### `app.js`
-- State management
-- API communication
-- WebSocket handling
-- DOM manipulation
-- Event handling
-
-#### `index.html`
-- Page structure
-- Semantic markup
-- Accessibility features
-
-#### `styles.css`
-- Visual styling
-- Layout and positioning
-- Responsive design
-- Animations
-
 ## Configuration Files
 
 ### `.env.example`
@@ -263,41 +242,6 @@ Build automation and development tasks.
 ### `.github/workflows/ci.yml`
 GitHub Actions CI/CD pipeline configuration.
 
-## Data Flow
-
-### Authentication Flow
-```
-1. User submits credentials
-2. Handler receives request
-3. Service validates credentials
-4. Repository checks database
-5. Service creates session
-6. Handler returns token
-7. Frontend stores token
-8. Token used in subsequent requests
-```
-
-### Post Creation Flow
-```
-1. User creates post
-2. Handler validates token
-3. Service validates post data
-4. Repository saves post
-5. Handler returns created post
-6. Frontend updates UI
-```
-
-### Real-time Message Flow
-```
-1. User sends message
-2. Handler validates and saves
-3. Service creates message
-4. Repository saves to database
-5. WebSocket hub broadcasts
-6. Connected clients receive
-7. Frontend updates UI
-```
-
 ## Testing Structure
 
 ```
@@ -309,108 +253,11 @@ backend/
 │       └── *_test.go       # Service tests
 ```
 
-### Test Patterns
-- Table-driven tests
-- In-memory database for isolation
-- Test fixtures and helpers
-- Mocking external dependencies
-
-## Build Artifacts
-
-### Development
-```
-backend/
-└── data/
-    └── forum.db           # Development database
-
-frontend/
-(No build artifacts, vanilla JS)
-```
-
-### Production
-```
-backend/
-├── bin/
-│   └── forum-backend      # Compiled binary
-└── data/
-    └── forum.db           # Production database
-
-Docker:
-- forum-backend:latest     # Docker image
-- forum-data               # Docker volume
-```
-
 ## Documentation Files
 
 | File | Purpose |
 |------|---------|
-| `README.md` | Project overview and getting started |
-| `API.md` | Complete API documentation |
-| `CONTRIBUTING.md` | Contribution guidelines |
-| `DEPLOYMENT.md` | Deployment instructions |
-| `CHANGELOG.md` | Version history |
-| `PROJECT_STRUCTURE.md` | This file |
-| `LICENSE` | MIT License |
-| `frontend/README.md` | Frontend-specific docs |
-
-## Dependencies
-
-### Backend (Go)
-- `gorilla/mux` - HTTP router
-- `gorilla/websocket` - WebSocket support
-- `mattn/go-sqlite3` - SQLite driver
-- `golang.org/x/crypto` - Cryptography (bcrypt)
-
-### Frontend
-- No external dependencies (vanilla JS)
-- Modern browser APIs only
-
-## Development Workflow
-
-```
-Development
-    ├── Write code
-    ├── Run tests (make test)
-    ├── Format code (make fmt)
-    ├── Lint code (make lint)
-    └── Build (make build)
-
-Deployment
-    ├── Build Docker image
-    ├── Run tests
-    ├── Deploy to environment
-    └── Health check
-```
-
-## Notes
-
-### Code Organization Principles
-1. **Separation of Concerns**: Each layer has a single responsibility
-2. **Dependency Injection**: Dependencies passed explicitly
-3. **Interface Segregation**: Small, focused interfaces
-4. **Single Responsibility**: Functions do one thing well
-
-### Naming Conventions
-- **Handlers**: `*Handler` suffix
-- **Services**: `*Service` suffix
-- **Repositories**: `*Repository` suffix
-- **Tests**: `*_test.go` suffix
-- **Interfaces**: No special suffix
-
-### Package Dependencies
-```
-cmd/server
-    ↓
-internal/api/router
-    ↓
-internal/api/handlers
-    ↓
-internal/service
-    ↓
-internal/repository
-    ↓
-internal/domain
-```
-
-No circular dependencies allowed.
-
+| [`README.md`](/README.md) | Project overview and getting started |
+| [`DEPLOYMENT.md`](/DEPLOYMENT.md) | Deployment instructions |
+| [`PROJECT_STRUCTURE.md`](/PROJECT_STRUCTURE.md) | This file |
+| [`LICENSE`](/LICENSE) | MIT License |

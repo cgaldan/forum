@@ -15,99 +15,15 @@ A modern, production-ready real-time forum application with WebSocket support, b
 - 📊 **Health Checks** - Built-in health check endpoint
 - 📝 **Structured Logging** - Comprehensive logging with log levels
 
-## Architecture
+## Deployment Process
 
-### Backend Structure
+Deployment scenarios are being analyzed here
+[DEPLOYMENT.md](/DEPLOYMENT.md)
 
-```
-backend/
-├── cmd/
-│   └── server/          # Application entry point
-├── internal/
-│   ├── api/
-│   │   ├── handlers/    # HTTP request handlers
-│   │   ├── middleware/  # HTTP middleware
-│   │   └── router/      # Route definitions
-│   ├── config/          # Configuration management
-│   ├── domain/          # Domain models and DTOs
-│   ├── repository/      # Data access layer
-│   ├── service/         # Business logic layer
-│   └── websocket/       # WebSocket hub and client
-├── pkg/
-│   └── logger/          # Logging package
-├── .env.example         # Environment variables template
-├── Dockerfile           # Docker image definition
-├── Makefile             # Build and development commands
-└── go.mod               # Go dependencies
-```
+## Project Structure
 
-### Frontend Structure
-
-```
-frontend/
-├── app.js               # Main application logic
-├── index.html           # HTML template
-└── styles.css           # Styles
-```
-
-## Quick Start
-
-### Prerequisites
-
-- Go 1.21 or higher
-- Docker and Docker Compose (optional)
-- Make (optional, for using Makefile commands)
-
-### Local Development
-
-1. **Clone the repository**
-
-```bash
-git clone <repository-url>
-cd real-time-forum
-```
-
-2. **Set up environment variables**
-
-```bash
-cd backend
-cp .env.example .env
-# Edit .env with your configuration
-```
-
-3. **Install dependencies**
-
-```bash
-make deps
-```
-
-4. **Run the application**
-
-```bash
-make run
-```
-
-The server will start on `http://localhost:8000`
-
-### Using Docker
-
-1. **Build and run with Docker Compose**
-
-```bash
-docker-compose up -d
-```
-
-2. **View logs**
-
-```bash
-docker-compose logs -f
-```
-
-3. **Stop the application**
-
-```bash
-docker-compose down
-```
+You can find detailed project structure here
+[PROJECT_STRUCTURE.md](/PROJECT_STRUCTURE.md)
 
 ## Configuration
 
@@ -119,12 +35,20 @@ Configuration is managed through environment variables. See `.env.example` for a
 |----------|-------------|---------|
 | `ENVIRONMENT` | Environment (development/production) | `development` |
 | `PORT` | Server port | `8000` |
-| `DATABASE_PATH` | SQLite database file path | `./data/forum.db` |
+| `SERVER_READ_TIMEOUT` | Server read timeout | `5s` |
+| `SERVER_WRITE_TIMEOUT` | Server write timeout | `15s` |
+| `SERVER_IDLE_TIMEOUT` | Server idle timeout | `60s` |
+| `DATABASE_PATH` | SQLite database file path | `./data/database/forum.db` |
 | `SESSION_DURATION` | Session expiration time | `24h` |
 | `RATE_LIMIT_ENABLED` | Enable rate limiting | `true` |
 | `RATE_LIMIT_RPM` | Requests per minute | `100` |
-
-## API Endpoints
+| `CORS_ALLOWED_ORIGINS` | Allowed CORS origins | `*` |
+| `WS_READ_BUFFER_SIZE` | WebSocket read buffer size | `1024` |
+| `WS_WRITE_BUFFER_SIZE` | WebSocket write buffer size | `1024` |
+| `WS_PING_PERIOD` | WebSocket ping period | `54s` |
+| `WS_PONG_WAIT` | WebSocket pong wait time | `60s` |
+| `WS_WRITE_WAIT` | WebSocket write wait time | `10s` |
+| `FRONTEND_PATH` | Path to frontend files | `../frontend` |
 
 ### Authentication
 
@@ -135,7 +59,7 @@ Configuration is managed through environment variables. See `.env.example` for a
 
 ### Posts
 
-- `GET /api/posts` - List posts (with optional category filter)
+- `GET /api/posts` - List posts (with optional category, limit, offset filters)
 - `POST /api/posts` - Create a new post
 - `GET /api/posts/{id}` - Get a single post with comments
 - `POST /api/posts/{id}/comments` - Create a comment
@@ -143,7 +67,7 @@ Configuration is managed through environment variables. See `.env.example` for a
 ### Messages
 
 - `GET /api/messages/conversations` - Get all conversations
-- `GET /api/messages/{id}` - Get messages with a user
+- `GET /api/messages/{id}` - Get messages with a user (with optional limit, offset)
 - `POST /api/messages/{id}` - Send a message to a user
 
 ### WebSocket
@@ -206,54 +130,6 @@ Run tests with:
 ```bash
 go test -v -race -coverprofile=coverage.out ./...
 ```
-
-## Deployment
-
-### Docker Deployment
-
-1. **Build the Docker image**
-
-```bash
-docker build -t forum-backend:latest ./backend
-```
-
-2. **Run the container**
-
-```bash
-docker run -p 8000:8000 \
-  -e ENVIRONMENT=production \
-  -e DATABASE_PATH=/app/data/forum.db \
-  -v forum-data:/app/data \
-  forum-backend:latest
-```
-
-### Docker Compose Deployment
-
-```bash
-docker-compose up -d
-```
-
-### Production Considerations
-
-1. **Security**
-   - Use strong session secrets
-   - Configure proper CORS origins
-   - Enable rate limiting
-   - Use HTTPS in production
-
-2. **Database**
-   - Regular backups of SQLite database
-   - Consider using PostgreSQL for high-traffic sites
-
-3. **Monitoring**
-   - Set up health check monitoring
-   - Configure log aggregation
-   - Monitor WebSocket connections
-
-4. **Performance**
-   - Adjust rate limiting based on traffic
-   - Configure connection pool sizes
-   - Use reverse proxy (nginx) for static files
 
 ## Database Schema
 
@@ -351,14 +227,6 @@ docker-compose up -d
 }
 ```
 
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
@@ -374,3 +242,10 @@ For support, please open an issue in the GitHub repository.
 - [SQLite](https://www.sqlite.org/) for the database
 - [bcrypt](https://pkg.go.dev/golang.org/x/crypto/bcrypt) for password hashing
 
+
+## Authors
+
+- Christos Gkaldanidis
+- Christos Markos
+
+Creators and primary Developers
