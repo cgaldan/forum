@@ -16,6 +16,11 @@ type Config struct {
 }
 
 func LoadConfig() (*Config, error) {
+	err := loadEnvFile(".env")
+	if err != nil {
+		return nil, err
+	}
+
 	cfg := &Config{
 		Environment: getEnv("ENVIRONMENT", "development"),
 		Server: ServerConfig{

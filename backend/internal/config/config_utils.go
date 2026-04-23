@@ -1,11 +1,47 @@
 package config
 
 import (
+	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
+
+func loadEnvFile(filename string) error {
+	file, err := os.Open(filename)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
+		}
+		return err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) != 2 {
+			continue
+		}
+
+		key := strings.TrimSpace(parts[0])
+		value := strings.Trim(strings.TrimSpace(parts[1]), `"'`)
+
+		if _, exists := os.LookupEnv(key); !exists {
+			os.Setenv(key, value)
+		}
+	}
+
+	return scanner.Err()
+}
 
 func (c *Config) Validate() error {
 	if c.Server.Port == "" {
