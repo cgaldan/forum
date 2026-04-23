@@ -80,15 +80,12 @@ func (s *AuthService) Login(loginData domain.LoginRequest) (*domain.User, string
 	user, passwordHash, err := s.userRepo.GetUserByIdentifier(loginData.Identifier)
 	if err != nil {
 		s.logger.Debug("Login failed - user not found", "identifier", loginData.Identifier)
-		return nil, "", fmt.Errorf("invalid identifier or password")
+		return nil, "", fmt.Errorf("user not found")
 	}
 
-	// REMEMBER TO REMOVE THIS BEFORE SUBMIT
-	if user.Nickname != "cgaldan" && user.Nickname != "cmarkos" {
-		if err := bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(loginData.Password)); err != nil {
-			s.logger.Debug("Login failed - password mismatch", "identifier", loginData.Identifier)
-			return nil, "", fmt.Errorf("invalid identifier or password")
-		}
+	if err := bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(loginData.Password)); err != nil {
+		s.logger.Debug("Login failed - password mismatch", "identifier", loginData.Identifier)
+		return nil, "", fmt.Errorf("invalid identifier or password")
 	}
 
 	if err := s.userRepo.UpdateLastSeen(user.ID); err != nil {
