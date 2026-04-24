@@ -1,16 +1,16 @@
-.PHONY: help build run test clean docker-build docker-run migrate
+.PHONY: help build run test clean docker-build docker-run docker-compose-up docker-compose-down migrate
 
 help:
 	@echo "Available commands:"
-	@echo "  make build        - Build the application"
-	@echo "  make run          - Run the application"
-	@echo "  make test         - Run tests"
-	@echo "  make clean        - Clean build artifacts"
-	@echo "  make docker-build - Build Docker image"
-	@echo "  make docker-run   - Run Docker container"
-	@echo "  make migrate      - Run database migrations"
-	@echo "  make lint         - Run linter"
-	@echo "  make fmt          - Format code"
+	@echo "  make build                - Build the application"
+	@echo "  make run                  - Run the application"
+	@echo "  make test                 - Run tests"
+	@echo "  make clean                - Clean build artifacts"
+	@echo "  make docker-build         - Build Docker image (needs repo root as context)"
+	@echo "  make docker-run           - Run container (port 8000)"
+	@echo "  make docker-compose-up    - docker compose up --build (from repo root)"
+	@echo "  make docker-compose-down  - docker compose down (from repo root)"
+	@echo "  make deps                 - Install dependencies"
 
 build:
 	@echo "Building..."
@@ -36,7 +36,13 @@ docker-build:
 
 docker-run:
 	@echo "Running Docker container..."
-	@docker run -p 8000:8000 --name forum-backend forum-backend:latest
+	@docker run --rm -p 8000:8000 --name forum-backend forum-backend:latest
+
+docker-compose-up:
+	@docker compose -f ../docker-compose.yml up --build
+
+docker-compose-down:
+	@docker compose -f ../docker-compose.yml down
 
 deps:
 	@echo "Installing dependencies..."

@@ -1,37 +1,18 @@
-version: '3.8'
-
 services:
-  backend:
+  forum:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/Dockerfile
+    image: forum-backend:latest
     container_name: forum-backend
     ports:
       - "8000:8000"
     environment:
-      - ENVIRONMENT=production
-      - PORT=8000
-      - DATABASE_PATH=/app/data/forum.db
-      - RATE_LIMIT_ENABLED=true
-      - RATE_LIMIT_RPM=100
+      ENVIRONMENT: production
+      SERVER_PORT: "8000"
+      FRONTEND_PATH: ./frontend
     volumes:
-      - forum-data:/app/data
-      - ./frontend:/app/frontend:ro
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-    networks:
-      - forum-network
+      - forum-data:/root/data
 
 volumes:
   forum-data:
-    driver: local
-
-networks:
-  forum-network:
-    driver: bridge
-

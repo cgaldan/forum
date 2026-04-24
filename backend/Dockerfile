@@ -23,6 +23,7 @@ COPY frontend/ ./frontend/
 RUN mkdir -p ./data
 
 ENV ENVIRONMENT=production
+ENV FRONTEND_PATH=./frontend
 
 EXPOSE 8000
 

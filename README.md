@@ -83,16 +83,16 @@ Configuration is managed through environment variables. See `.env.example` for a
 ### Available Make Commands
 
 ```bash
-make help          # Show available commands
-make build         # Build the application
-make run           # Run the application
-make test          # Run tests
-make clean         # Clean build artifacts
-make docker-build  # Build Docker image
-make docker-run    # Run Docker container
-make lint          # Run linter
-make fmt           # Format code
-make deps          # Install dependencies
+make help                 # Show available commands
+make build                # Build the application
+make run                  # Run the application
+make test                 # Run tests
+make clean                # Clean build artifacts
+make docker-build         # Build Docker image
+make docker-run           # Run Docker container
+make docker-compose-up    # Run Docker Compose
+make docker-compose-down  # Remove Docker Container
+make deps                 # Install dependencies
 ```
 
 ### Running Tests
